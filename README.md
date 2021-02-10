@@ -88,7 +88,7 @@ for REC in STDF.records_from_file("blahbla.stdf"):
     print(REC)
 ```
 
-## convert an STDF file into an ATD file
+## convert an STDF file into an ATDF file
 
 ```python
 from Semi_ATE.data import STDF
@@ -98,7 +98,4 @@ stdf_basename = "blahblah"
 with open(f"{stdf_basename}.atdf", "w") as atdf:
    for REC in STDF.records_from_file(f"{stdf_basename}.stdf"):
        atdf.write(REC.to_atdf())
-```
-
-
 ```
