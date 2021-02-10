@@ -118,4 +118,4 @@ with open(f"{basename}.atdf", "w") as atdf:
 
 # Note
 
-You could use this library to make your own "converters", however this is the goal of the [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project, so by unsing [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) (which depends on Semi-ATE-STDF) you don't need to handle the 'conversion' anymore and you can directly make your hands dirty with the 'tool' you want to have make !!! :thumbsup: 
+You could use this library to make your own "converters", however this is the goal of the [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project, so by unsing [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) (which depends on Semi-ATE-STDF) you don't need to handle the 'conversion' anymore and you can directly make your hands dirty with the 'tool' you want to have !!! :thumbsup: 
