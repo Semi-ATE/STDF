@@ -92,6 +92,15 @@ for REC in STDF.records_from_file("blahbla.stdf"):
     print(REC)
 ```
 
+## work with a STDF file storred in compressed form (lzma)
+
+```python
+from Semi_ATE.data import STDF
+
+for REC in STDF.records_from_file("blahbla.stdf.xz"):
+    print(REC)
+```
+
 ## convert an STDF file into an ATDF file
 
 ```python
