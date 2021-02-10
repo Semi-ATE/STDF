@@ -93,9 +93,13 @@ for REC in STDF.records_from_file("blahbla.stdf"):
 ```python
 from Semi_ATE.data import STDF
 
-stdf_basename = "blahblah"
+basename = "blahblah"
 
-with open(f"{stdf_basename}.atdf", "w") as atdf:
-   for REC in STDF.records_from_file(f"{stdf_basename}.stdf"):
+with open(f"{basename}.atdf", "w") as atdf:
+   for REC in STDF.records_from_file(f"{basename}.stdf"):
        atdf.write(REC.to_atdf())
 ```
+
+# Note
+
+You could use this library to make your own "converters", but this is the goal of the [Semi_ATE_Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project, so check it out!
