@@ -14,19 +14,19 @@ The point is that STDF data should be converted to a useable format like [pandas
 
 Think of it like this: STDF is a very good format from the point of view of the ATE, because if a test program is crashing, we lost virtually no data! Also, in STDF <ins>everything</ins> conserning an ATE <ins>has his defined place</ins>! (as opposed to [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) or similar ... naaah, you can not call it a 'format' can you?) Anyway, STDF is an un-usable format from the point of view of data analysis! Therefore we need to convert the data to a format that **is** usable. (and if now you are thinking '[SQL](https://en.wikipedia.org/wiki/SQL)', then I can confirm that you are a die-hard masochist that still lives in the last millennium because you are clearly not up to speed when it comes to [data science](https://en.wikipedia.org/wiki/Data_science)! 🧐)
 
-Anyway, I did put `pandas` forward, because the rest of `ATE.org` is Python (>=3.6) based, but to be fair one could [also go the SAS- or the R way](https://www.analyticsvidhya.com/blog/2017/09/sas-vs-vs-python-tool-learn/) but those make less sense in the `ATE.org` concept.
+Anyway, I did put `pandas` forward, because [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) is Python (>=3.7) based, but to be fair one could [also go the SAS- or the R way](https://www.analyticsvidhya.com/blog/2017/09/sas-vs-vs-python-tool-learn/) but those make less sense in the `Semi-ATE` concept.
 
-In any case, `ATE.org` is **ONLY** outputting STDF data, so whatever (legacy) system(s) you have, `ATE.org` will play along nicely!
+In any case, [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) is outputting STDF data, so whatever (legacy) system(s) you have, [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) will play along nicely!
 
-The `ATE.org` [Metis](/src/ATE/data/Metis/README.md) library builds on **STDF**/[numpy](https://numpy.org/)/[scipy](https://www.scipy.org/)/[pandas](https://pandas.pydata.org/)/[HDF5](https://www.hdfgroup.org/solutions/hdf5/)/[matplotlib](https://matplotlib.org/) to deliver data analysis tailored to the semiconductor test industry ... in open source!
+The [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project builds on [Semi-ATE-STDF]()/[numpy](https://numpy.org/)/[scipy](https://www.scipy.org/)/[pandas](https://pandas.pydata.org/)/[GStreamer](https://gstreamer.freedesktop.org/)/[HDF5](https://www.hdfgroup.org/solutions/hdf5/)/[matplotlib](https://matplotlib.org/) to deliver data analysis tailored to the semiconductor test industry ... in open source!
 
 Eat that Mentor! For years you took [money-for-nothing](https://www.youtube.com/watch?v=wTP2RUD_cL0), and in the end you still screwed your customers (cfr. `PAT`). [My-silver-lining](https://www.youtube.com/watch?v=DKL4X0PZz7M): now we will do some screwing! See how that feels! 😋
 
 ### It is also <ins>NOT just a parser</ins>!
 
-In `ATE.org` we also need to **<ins>write</ins>** STDF files!
+In [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) we also need to **<ins>write</ins>** STDF files!
 
-Infact here are the specifications of the `ATE.org` **STDF** library:
+Infact here are the specifications of the **Semi-ATE-STDF** library:
 
  - [<ins>Endianness</ins>](https://en.wikipedia.org/wiki/Endianness): Little & Big
  - Formats: [STDF]((/docs/standards/STDF/STDF-V4-spec.pdf)) & [ATDF](https://sourceforge.net/p/freestdf/svn/HEAD/tree/docs/atdf-spec.pdf?format=raw)
