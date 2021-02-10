@@ -43,7 +43,7 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
    - [bz2](https://www.sourceware.org/bzip2/)
  - <ins>encodings</ins>:
    - [ASCII](https://en.wikipedia.org/wiki/ASCII)
-   - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python<ins>3</ins> itself 😎)
+   - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python**3** itself 😎)
  - <ins>floating point extensions</ins>:
    - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
  - <ins>Python = 3</ins> (support for python2 is depricated)
