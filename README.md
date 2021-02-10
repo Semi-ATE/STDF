@@ -48,9 +48,12 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
    - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
  - <ins>Python3</ins> (support for python2 is depricated)
    - Python 3.7
-   - Python 3.8   ---add-badges-here---
+   - Python 3.8   ---add-badges-here--- (code coverage, build)
    - Python 3.9 
-
+  - <ins>Packaging</ins>:
+    - PyPI : ---add-badges-here--- 
+    - conda-forge : ---add-badges-here---
+    
 # Installation
 
 ## Stand alone
