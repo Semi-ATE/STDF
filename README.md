@@ -77,11 +77,28 @@ $ conda install Semi_ATE
 $ pip install Semi_ATE
 ```
 
-# Usage
+# Usage 
+
+## print an STDF in a human readable form on the standard output
 
 ```python
 from Semi_ATE.data import STDF
 
-for REC in STDF.read_records_from_file("blahbla.stdf"):
+for REC in STDF.records_from_file("blahbla.stdf"):
     print(REC)
+```
+
+## convert an STDF file into an ATD file
+
+```python
+from Semi_ATE.data import STDF
+
+stdf_basename = "blahblah"
+
+with open(f"{stdf_basename}.atdf", "w") as atdf:
+   for REC in STDF.records_from_file(f"{stdf_basename}.stdf"):
+       atdf.write(REC.to_atdf())
+```
+
+
 ```
