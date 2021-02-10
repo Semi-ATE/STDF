@@ -49,16 +49,32 @@ Infact here are the specifications of the `ATE.org` **STDF** library:
 
 # Installation
 
-## conda (preferred)
+## Stand alone
+
+### conda (preferred)
 
 ```bash
 $ conda install Semi_ATE_STDF
 ```
 
-## pip (discouraged but possible)
+### pip (discouraged but possible)
 
 ```bash
 $ pip install Semi_ATE_STDF
+```
+
+## As part of the Semi-ATE suit
+
+### conda (preferred)
+
+```bash
+$ conda install Semi_ATE
+```
+
+### pip (discouraged but possible)
+
+```bash
+$ pip install Semi_ATE
 ```
 
 # Usage
