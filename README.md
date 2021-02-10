@@ -29,6 +29,7 @@ In `ATE.org` we also need to **<ins>write</ins>** STDF files!
 Infact here are the specifications of the `ATE.org` **STDF** library:
 
  - [<ins>Endianness</ins>](https://en.wikipedia.org/wiki/Endianness): Little & Big
+ - Formats: [STDF]((/docs/standards/STDF/STDF-V4-spec.pdf)) & [ATDF](https://sourceforge.net/p/freestdf/svn/HEAD/tree/docs/atdf-spec.pdf?format=raw)
  - <ins>Versions & Extensions</ins>:
    - ~~V3~~: support depricated
    - V4:
