@@ -106,4 +106,4 @@ with open(f"{basename}.atdf", "w") as atdf:
 
 # Note
 
-You could use this library to make your own "converters", but this is the goal of the [Semi_ATE_Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project, so check it out!
+You could use this library to make your own "converters", but this is the goal of the [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project, so be sure to check it out!
