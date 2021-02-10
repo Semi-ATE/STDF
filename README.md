@@ -84,7 +84,7 @@ $ conda install Semi_ATE
 $ pip install Semi_ATE
 ```
 
-# Usage 
+# Usage examples
 
 ## print an STDF in a human readable form on the standard output
 
