@@ -46,6 +46,7 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
    - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python itself 😎)
  - <ins>floating point extensions</ins>:
    - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
+ - Python Versions: >= 3.7
 
 # Installation
 
