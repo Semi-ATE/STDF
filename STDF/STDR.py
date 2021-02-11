@@ -2033,8 +2033,16 @@ class STDR(ABC):
                     else:
     #                    ATDF spec page 9:
     #                    Insignificant leading zeroes in all numbers are optional.
-                        t = time.strftime("%-H:%-M:%-S %-d-%b-%Y", time.gmtime(timestamp))
-                        body += '%s|' % (t.upper())
+                        t = ""
+                        if os.name == "nt":
+                            t = time.strftime(
+                                "%#H:%#M:%#S %#d-%b-%Y", time.gmtime(timestamp)
+                            )
+                        else:
+                            t = time.strftime(
+                                "%-H:%-M:%-S %-d-%b-%Y", time.gmtime(timestamp)
+                            )
+                        body += "%s|" % (t.upper())
                         
                 elif sequence[field] in skip_fields:
 #                    Some fields must be skipped like number of elements in array:
