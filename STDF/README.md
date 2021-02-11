@@ -1,4 +1,4 @@
-# The STDF (<ins>S</ins>tandard <ins>T</ins>est <ins>D</ins>ata <ins>F</ins>ormat)  library from Semi-ATE
+# The STDF (<ins>S</ins>tandard <ins>T</ins>est <ins>D</ins>ata <ins>F</ins>ormat)  library
 
 ### This library is NOT intended to be the <ins>fastes in the world</ins>!
 
@@ -14,28 +14,27 @@ The point is that STDF data should be converted to a useable format like [pandas
 
 Think of it like this: STDF is a very good format from the point of view of the ATE, because if a test program is crashing, we lost virtually no data! Also, in STDF <ins>everything</ins> conserning an ATE <ins>has his defined place</ins>! (as opposed to [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) or similar ... naaah, you can not call it a 'format' can you?) Anyway, STDF is an un-usable format from the point of view of data analysis! Therefore we need to convert the data to a format that **is** usable. (and if now you are thinking '[SQL](https://en.wikipedia.org/wiki/SQL)', then I can confirm that you are a die-hard masochist that still lives in the last millennium because you are clearly not up to speed when it comes to [data science](https://en.wikipedia.org/wiki/Data_science)! 🧐)
 
-Anyway, I did put `pandas` forward, because [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) is Python (>=3.7) based, but to be fair one could [also go the SAS- or the R way](https://www.analyticsvidhya.com/blog/2017/09/sas-vs-vs-python-tool-learn/) but those make less sense in the `Semi-ATE` concept.
+Anyway, I did put `pandas` forward, because the rest of `ATE.org` is Python (>=3.6) based, but to be fair one could [also go the SAS- or the R way](https://www.analyticsvidhya.com/blog/2017/09/sas-vs-vs-python-tool-learn/) but those make less sense in the `ATE.org` concept.
 
-In any case, [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) is outputting STDF data, so whatever (legacy) system(s) you have, [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) will play along nicely!
+In any case, `ATE.org` is **ONLY** outputting STDF data, so whatever (legacy) system(s) you have, `ATE.org` will play along nicely!
 
-The [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project builds on [Semi-ATE-STDF]()/[numpy](https://numpy.org/)/[scipy](https://www.scipy.org/)/[pandas](https://pandas.pydata.org/)/[GStreamer](https://gstreamer.freedesktop.org/)/[HDF5](https://www.hdfgroup.org/solutions/hdf5/)/[matplotlib](https://matplotlib.org/) to deliver data analysis tailored to the semiconductor test industry ... in open source!
+The `ATE.org` [Metis](/src/ATE/data/Metis/README.md) library builds on **STDF**/[numpy](https://numpy.org/)/[scipy](https://www.scipy.org/)/[pandas](https://pandas.pydata.org/)/[HDF5](https://www.hdfgroup.org/solutions/hdf5/)/[matplotlib](https://matplotlib.org/) to deliver data analysis tailored to the semiconductor test industry ... in open source!
 
 Eat that Mentor! For years you took [money-for-nothing](https://www.youtube.com/watch?v=wTP2RUD_cL0), and in the end you still screwed your customers (cfr. `PAT`). [My-silver-lining](https://www.youtube.com/watch?v=DKL4X0PZz7M): now we will do some screwing! See how that feels! 😋
 
 ### It is also <ins>NOT just a parser</ins>!
 
-In [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) we also need to **<ins>write</ins>** STDF files!
+In `ATE.org` we also need to **<ins>write</ins>** STDF files!
 
-Infact here are the specifications of the **Semi-ATE-STDF** library:
+Infact here are the specifications of the `ATE.org` **STDF** library:
 
  - [<ins>Endianness</ins>](https://en.wikipedia.org/wiki/Endianness): Little & Big
- - Formats: [STDF]((/docs/standards/STDF/STDF-V4-spec.pdf)) & [ATDF](https://sourceforge.net/p/freestdf/svn/HEAD/tree/docs/atdf-spec.pdf?format=raw)
  - <ins>Versions & Extensions</ins>:
    - ~~V3~~: support depricated
    - V4:
      - [standard](/docs/standards/STDF/STDF-V4-spec.pdf)
      - [V4-2007](/docs/standards/STDF/STDF-V4-2007-spec.pdf)
-     - Memory:2010.1 (planned but not implemented yet)
+     - Memory:2010.1
  - <ins>Modes</ins>: read & write
  - <ins>compressions</ins>: (in **all** modes!)
    - [gzip](https://www.gnu.org/software/gzip/)
@@ -43,79 +42,7 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
    - [bz2](https://www.sourceware.org/bzip2/)
  - <ins>encodings</ins>:
    - [ASCII](https://en.wikipedia.org/wiki/ASCII)
-   - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python**3** itself 😎)
+   - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python itself 😎)
  - <ins>floating point extensions</ins>:
-   - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
- - <ins>Python3</ins> (support for python2 is depricated)
-   - Python 3.7
-   - Python 3.8   ---add-badges-here--- (code coverage, build)
-   - Python 3.9 
-  - <ins>Packaging</ins>:
-    - PyPI : ---add-badges-here--- 
-    - conda-forge : ---add-badges-here---
-    
-# Installation
-
-## Stand alone
-
-### conda (preferred)
-
-```bash
-$ conda install Semi_ATE_STDF
-```
-
-### pip (discouraged but possible)
-
-```bash
-$ pip install Semi_ATE_STDF
-```
-
-## As part of the Semi-ATE suit
-
-### conda (preferred)
-
-```bash
-$ conda install Semi_ATE
-```
-
-### pip (discouraged but possible)
-
-```bash
-$ pip install Semi_ATE
-```
-
-# Usage examples
-
-## print an STDF in a human readable form on the standard output
-
-```python
-import STDF
-
-for REC in STDF.records_from_file("blahbla.stdf"):
-    print(REC)
-```
-
-## work with a STDF file storred in compressed form (lzma)
-
-```python
-import STDF
-
-for REC in STDF.records_from_file("blahbla.stdf.xz"):
-    print(REC)
-```
-
-## convert an STDF file into an ATDF file
-
-```python
-import STDF
-
-basename = "blahblah"
-
-with open(f"{basename}.atdf", "w") as atdf:
-   for REC in STDF.records_from_file(f"{basename}.stdf"):
-       atdf.write(REC.to_atdf())
-```
-
-# Note
-
-You could use this library to make your own "converters", however this is the goal of the [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project, so by unsing [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) (which depends on Semi-ATE-STDF) you don't need to handle the 'conversion' anymore and you can directly make your hands dirty with the 'tool' you want to have !!! :thumbsup: 
+   - [Not A Number](https://en.wikipedia.org/wiki/NaN) (aka: NaN, nan)
+   - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: Infinity, Inf, inf)
