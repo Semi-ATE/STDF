@@ -86,10 +86,13 @@ $ pip install Semi_ATE
 
 # Usage examples
 
+This STDF library is a part of the Semi-ATE suit, and it shares the namespace.
+
+
 ## print an STDF in a human readable form on the standard output
 
 ```python
-import STDF
+from Semi_ATE.data import STDF
 
 for REC in STDF.records_from_file("blahbla.stdf"):
     print(REC)
@@ -98,7 +101,7 @@ for REC in STDF.records_from_file("blahbla.stdf"):
 ## work with a STDF file storred in compressed form (lzma)
 
 ```python
-import STDF
+from Semi_ATE.data import STDF
 
 for REC in STDF.records_from_file("blahbla.stdf.xz"):
     print(REC)
@@ -107,7 +110,7 @@ for REC in STDF.records_from_file("blahbla.stdf.xz"):
 ## convert an STDF file into an ATDF file
 
 ```python
-import STDF
+from Semi_ATE.data import STDF
 
 basename = "blahblah"
 
