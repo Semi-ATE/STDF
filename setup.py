@@ -15,6 +15,7 @@ setup(
     version=__version__,
     description="Library to parse/write STDF/ATEF files",
     long_description=LONG_DESCRIPTION,
+    long_description_content_type='text/markdown',
     author="Semi-ATE",
     author_email="info@Semi-ATE.com",
     license="MIT",
