@@ -2,7 +2,7 @@
 import io
 
 from setuptools import find_packages, setup
-from STDF import __version__
+from Semi-ATE.data.STDF import __version__
 
 # =============================================================================
 # Use Readme for long description
