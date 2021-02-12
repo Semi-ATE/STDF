@@ -1,0 +1,6 @@
+include *.md
+include LICENSE
+recursive-include requirements *.txt
+recursive-exclude tests *.py
+recursive-include Semi_ATE *.py
+recursive-include scripts *.py
