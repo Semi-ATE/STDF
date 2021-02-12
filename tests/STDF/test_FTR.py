@@ -2,7 +2,7 @@ import os
 import math
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import FTR
+from Semi_ATE.data.STDF import FTR
 
 #   Functional Test Record
 #   Function:

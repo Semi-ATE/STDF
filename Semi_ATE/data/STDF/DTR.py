@@ -1,4 +1,4 @@
-from STDF import STDR
+from . import STDR
 
 class DTR(STDR):
     def __init__(self, version=None, endian=None, record=None):

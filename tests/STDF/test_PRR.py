@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import PRR
+from Semi_ATE.data.STDF import PRR
 
 #   Part Results Record
 #   Function:

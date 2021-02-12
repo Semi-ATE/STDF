@@ -3,7 +3,7 @@ import tempfile
 import pytest
 
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import WCR
+from Semi_ATE.data.STDF import WCR
 
 #   Wafer Results Record
 #   Function:

@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import GDR
+from Semi_ATE.data.STDF import GDR
 
 #   Generic Data Record
 #   Function:
