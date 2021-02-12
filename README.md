@@ -1,4 +1,4 @@
-# The STDF (<ins>S</ins>tandard <ins>T</ins>est <ins>D</ins>ata <ins>F</ins>ormat)  library from Semi-ATE
+# Semi-ATE's STDF (<ins>S</ins>tandard <ins>T</ins>est <ins>D</ins>ata <ins>F</ins>ormat) library
 
 ### This library is NOT intended to be the <ins>fastes in the world</ins>!
 
