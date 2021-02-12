@@ -86,7 +86,11 @@ Location:
 #       5 FINISH_T
         v = self.get_fields(5)[3]
         if v != None:
-            t = time.strftime("%-H:%-M:%-S %-d-%b-%Y", time.gmtime(v))
+            t = ""
+            if os.name == "nt":
+                t = time.strftime("%#H:%#M:%#S %#d-%b-%Y", time.gmtime(v))
+            else:
+                t = time.strftime("%-H:%-M:%-S %-d-%b-%Y", time.gmtime(v))
             body += "%s|" % (t.upper())
 
 #       6 PART_CNT
