@@ -1,5 +1,5 @@
 import os
-import tempfile
+import io
 from tests.STDF.STDFRecordTest import STDFRecordTest
 from Semi_ATE.data.STDF import PRR
 
@@ -13,7 +13,7 @@ def test_PRR():
     prr('<')
     prr('>')
 
-def prr(end):
+def prr(endian):
     
 #   ATDF page 39
     expected_atdf = "PRR:"
@@ -21,7 +21,7 @@ def prr(end):
     rec_len = 0;
 
 #   STDF v4 page 43
-    record = PRR(endian = end)
+    record = PRR(endian = endian)
 
     head_num = 1 
     record.set_value('HEAD_NUM', head_num)
@@ -129,18 +129,11 @@ def prr(end):
 #    Test serialization
 #    1. Save PRR STDF record into a file
 #    2. Read byte by byte and compare with expected value
-    
-    tf = tempfile.NamedTemporaryFile(delete=False)  
-    
-    f = open(tf.name, "wb")
-#  seimit found ERROR  : STDF.records.STDFError: EPS._pack_item(REC_LEN) : Unsupported Reference '' vs 'U*2'
-    w_data = record.__repr__()
-    f.write(w_data)
-    f.close
 
-    f = open(tf.name, "rb")
-    
-    stdfRecTest = STDFRecordTest(f, end)
+    w_data = record.__repr__()
+    io_data = io.BytesIO(w_data)
+
+    stdfRecTest = STDFRecordTest(io_data, endian)
 #   rec_len, rec_type, rec_sub
     stdfRecTest.assert_file_record_header(rec_len, 5, 20)
 #   Test HEAD_NUM, expected value head_num
@@ -174,13 +167,11 @@ def prr(end):
     stdfRecTest.assert_ubyte(0x2D)
     stdfRecTest.assert_ubyte(0xD2)
 
-    f.close()    
-
 #    Test de-serialization
 #    1. Open STDF record from a file
 #    2. Read record fields and compare with the expected value
 
-    inst = PRR('V4', end, w_data)
+    inst = PRR('V4', endian, w_data)
 #   rec_len, rec_type, rec_sub
     stdfRecTest.assert_instance_record_header(inst , rec_len, 5, 20)
 #   Test HEAD_NUM, position 3, value of head_num variable
@@ -212,5 +203,3 @@ def prr(end):
     assert inst.to_atdf() == expected_atdf
 
 #   ToDo: Test JSON output
-    
-    os.remove(tf.name)
