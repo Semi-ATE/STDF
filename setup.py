@@ -2,7 +2,7 @@
 import io
 
 from setuptools import find_packages, setup
-from Semi-ATE.data.STDF import __version__
+from Semi_ATE.data.STDF import __version__
 
 # =============================================================================
 # Use Readme for long description
@@ -13,34 +13,31 @@ with io.open('README.md', encoding='utf-8') as f:
 setup(
     name="Semi-ATE-STDF",
     version=__version__,
-    description="Framework for Semiconductor ATE testing projects",
+    description="Library to parse/write STDF/ATEF files",
     long_description=LONG_DESCRIPTION,
-    author="The Semi-ATE Project Contributors",
-    author_email="ate.organization@gmail.com",
-    license="GPL2",
+    author="Semi-ATE",
+    author_email="info@Semi-ATE.com",
+    license="MIT",
     keywords="Semiconductor ATE Automatic Test Equipment",
     platforms=["Windows", "Linux", "Mac OS-X"],
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
-        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
+        'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)',
-        'Topic :: Scientific/Engineering :: Human Machine Interfaces',
         'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
-        'Topic :: Software Development :: Build Tools',
-        'Topic :: Software Development :: Code Generators',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Software Development :: Quality Assurance',
     ]
 )
