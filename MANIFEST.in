@@ -1,5 +1,5 @@
-include *.md
 include LICENSE
+recursive-include Semi_ATE *.md
 recursive-include requirements *.txt
 recursive-exclude tests *.py
 recursive-include Semi_ATE *.py
