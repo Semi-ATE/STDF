@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import SBR
+from Semi_ATE.data.STDF import SBR
 
 #   Software Bin Record
 #   Function:

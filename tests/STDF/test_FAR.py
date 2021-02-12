@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import FAR
+from Semi_ATE.data.STDF import FAR
 
 #   File Attributes Record
 #   Functuion:

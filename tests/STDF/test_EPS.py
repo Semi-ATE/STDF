@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import EPS
+from Semi_ATE.data.STDF import EPS
 
 #   End Program Section Record
 #   Function:

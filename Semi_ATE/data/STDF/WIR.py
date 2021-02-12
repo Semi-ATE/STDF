@@ -1,7 +1,7 @@
 import sys
 import time
 
-from STDF import STDR
+from . import STDR
 
 class WIR(STDR):
     def __init__(self, version=None, endian=None, record=None):

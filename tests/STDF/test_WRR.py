@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import WRR
+from Semi_ATE.data.STDF import WRR
 
 #   Wafer Results Record
 #   Function:

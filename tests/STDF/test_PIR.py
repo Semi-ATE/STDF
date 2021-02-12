@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import PIR
+from Semi_ATE.data.STDF import PIR
 
 #   Part Information Record :
 #   Function:

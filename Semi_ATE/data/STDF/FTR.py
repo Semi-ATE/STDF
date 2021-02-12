@@ -1,5 +1,5 @@
 import sys
-from STDF import STDR
+from . import STDR
 
 class FTR(STDR):
     def __init__(self, version=None, endian=None, record=None):

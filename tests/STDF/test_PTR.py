@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import PTR
+from Semi_ATE.data.STDF import PTR
 
 #   Parametric Test Record
 #   Function:

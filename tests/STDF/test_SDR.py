@@ -1,7 +1,7 @@
 import os
 import tempfile
 from tests.STDF.STDFRecordTest import STDFRecordTest
-from STDF import SDR
+from Semi_ATE.data.STDF import SDR
 
 #   Site Description Record
 #   Function:

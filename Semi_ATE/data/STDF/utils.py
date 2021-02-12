@@ -9,9 +9,9 @@ import struct
 import sys
 import io
 
-from STDF import ts_to_id
-from STDF import supported
-from STDF import (ATR, BPS, DTR, EPS, FAR, FTR, GDR, HBR, MIR, MPR, MRR, PCR, PGR, PIR, PLR, PMR, PRR, PTR, RDR, SBR, SDR, TSR, WIR, WCR, WRR)
+from .STDR import ts_to_id
+from . import supported
+from . import (ATR, BPS, DTR, EPS, FAR, FTR, GDR, HBR, MIR, MPR, MRR, PCR, PGR, PIR, PLR, PMR, PRR, PTR, RDR, SBR, SDR, TSR, WIR, WCR, WRR)
 
 #from ATE.utils.compression import default_compression
 #from ATE.utils.compression import get_deflated_file_size

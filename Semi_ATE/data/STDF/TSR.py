@@ -1,5 +1,5 @@
 import sys
-from STDF import STDR
+from . import STDR
 
 
 class TSR(STDR):
