@@ -3,7 +3,7 @@ name: CI
 on: [push]
 
 jobs:
-  test-linux:
+  - test-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,4 +28,28 @@ jobs:
       - name: Check manifest 
         run: |
           check-manifest
-# test-windows:
+#  - test-windows:
+#    runs-on: windows-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v2
+#      - name: Setup python
+#        uses: actions/setup-python@v2
+#        with:
+#          python-version: '3.8'
+#      - name: Setup dependencies
+#        run: |
+#          pip install -r requirements/run.txt
+#          pip install -r requirements/test.txt
+##      - name: Show environment
+##        run: pip list
+#      - name: Run tests
+#        run: |
+#          pytest tests/ --cov=STDF
+#      - name: Check package
+#        run: |
+#          python setup.py sdist
+#          twine check dist/*
+#      - name: Check manifest 
+#        run: |
+#          check-manifest
