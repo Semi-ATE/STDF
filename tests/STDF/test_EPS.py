@@ -1,7 +1,7 @@
 import os
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import EPS
+from .STDFRecordTest import STDFRecordTest
+from ..STDF import EPS
 
 #   End Program Section Record
 #   Function:

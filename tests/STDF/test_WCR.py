@@ -2,8 +2,8 @@ import os
 import io
 import pytest
 
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import WCR
+from .STDFRecordTest import STDFRecordTest
+from ..STDF import WCR
 
 #   Wafer Results Record
 #   Function:

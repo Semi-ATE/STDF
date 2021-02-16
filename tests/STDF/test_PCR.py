@@ -1,7 +1,7 @@
 import os
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import PCR
+from .STDFRecordTest import STDFRecordTest
+from ..STDF import PCR
 
 #   Part Count Record
 #   Function:

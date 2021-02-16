@@ -1,7 +1,7 @@
 import os
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import HBR
+from .STDFRecordTest import STDFRecordTest
+from ..STDF import HBR
 
 #   Hardware Bin Record
 #   Function:

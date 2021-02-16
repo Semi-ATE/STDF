@@ -1,4 +1,4 @@
-from Semi_ATE.data.STDF import STDR
+from ..STDF import STDR
         
 
 def test_STDR():
