@@ -1,7 +1,8 @@
 import os
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import SDR
+
+from .STDFRecordTest import STDFRecordTest
+from Semi_ATE.STDF import SDR
 
 #   Site Description Record
 #   Function:

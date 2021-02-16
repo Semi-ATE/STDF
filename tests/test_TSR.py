@@ -1,7 +1,8 @@
 import os
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import TSR
+
+from .STDFRecordTest import STDFRecordTest
+from Semi_ATE.STDF import TSR
 
 #   Test Synopsis Record
 #   Function:

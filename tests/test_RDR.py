@@ -1,7 +1,8 @@
 import os
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import RDR
+
+from .STDFRecordTest import STDFRecordTest
+from Semi_ATE.STDF import RDR
 
 #   Retest Data Record
 #   Function:

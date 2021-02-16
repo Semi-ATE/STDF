@@ -1,8 +1,9 @@
 import os
 import math
 import io
-from tests.STDF.STDFRecordTest import STDFRecordTest
-from Semi_ATE.data.STDF import FTR
+
+from .STDFRecordTest import STDFRecordTest
+from Semi_ATE.STDF import FTR
 
 #   Functional Test Record
 #   Function:
