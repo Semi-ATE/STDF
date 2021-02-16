@@ -3,7 +3,7 @@ print (">>>>>>>>>>>>>>>>", os.getcwd())
 
 import io
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import ATR
+from .Semi_ATE.STDF import ATR
 
 #   Audit Trail Record
 #   Function:
