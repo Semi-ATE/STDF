@@ -1,7 +1,7 @@
 import os
 import io
 from .STDFRecordTest import STDFRecordTest
-from .Semi_ATE.STDF import BPS
+from Semi_ATE.STDF import BPS
 
 #   Begin Program Section Record
 #   Function:

@@ -1,7 +1,8 @@
 import os
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import PRR
+from Semi_ATE.STDF import PRR
 
 #   Part Results Record
 #   Function:

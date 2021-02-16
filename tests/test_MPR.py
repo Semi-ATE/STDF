@@ -1,8 +1,9 @@
 import os
 import math
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import MPR
+from Semi_ATE.STDF import MPR
 
 
 #   Multiple-Result Parametric Record

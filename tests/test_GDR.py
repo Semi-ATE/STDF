@@ -1,7 +1,8 @@
 import os
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import GDR
+from Semi_ATE.STDF import GDR
 
 #   Generic Data Record
 #   Function:

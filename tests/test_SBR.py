@@ -1,7 +1,8 @@
 import os
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import SBR
+from Semi_ATE.STDF import SBR
 
 #   Software Bin Record
 #   Function:

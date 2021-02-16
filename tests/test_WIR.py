@@ -1,7 +1,8 @@
 import os
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import WIR
+from Semi_ATE.STDF import WIR
 
 #   Wafer Information Record
 #   Function:

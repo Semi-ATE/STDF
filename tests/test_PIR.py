@@ -1,7 +1,8 @@
 import os
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import PIR
+from Semi_ATE.STDF import PIR
 
 #   Part Information Record :
 #   Function:

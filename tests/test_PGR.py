@@ -1,7 +1,8 @@
 import os
 import io
+
 from .STDFRecordTest import STDFRecordTest
-from ..Semi_ATE.STDF import PGR
+from Semi_ATE.STDF import PGR
 
 #   Pin Group Record
 #   Function:
