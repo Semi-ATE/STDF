@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 from Semi_ATE.STDF import __version__
 
 # =============================================================================
-# Use Readme for long description
+# Use README.md for long description
 # =============================================================================
 with io.open('README.md', encoding='utf-8') as f:
     LONG_DESCRIPTION = f.read()
@@ -13,13 +13,13 @@ with io.open('README.md', encoding='utf-8') as f:
 setup(
     name="Semi-ATE-STDF",
     version=__version__,
-    description="Library to parse/write STDF/ATEF files",
+    description="Library to read/write STDF/ATDF files",
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
     author="Semi-ATE",
     author_email="info@Semi-ATE.com",
     license="MIT",
-    keywords="Semiconductor ATE Automatic Test Equipment",
+    keywords="Semiconductor ATE Automatic Test Equipment STDF",
     platforms=["Windows", "Linux", "Mac OS-X"],
     packages=find_packages(),
     include_package_data=True,
