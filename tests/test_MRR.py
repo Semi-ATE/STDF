@@ -1,7 +1,7 @@
 import os
 import io
 from .STDFRecordTest import STDFRecordTest
-from ..STDF import MRR
+from ..Semi_ATE.STDF import MRR
 
 #   Master Results Record
 #   Function:

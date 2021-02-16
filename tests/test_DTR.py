@@ -1,7 +1,7 @@
 import os
 import io
 from .STDFRecordTest import STDFRecordTest
-from ..STDF import DTR
+from ..Semi_ATE.STDF import DTR
 
 #   Datalog Text Record
 #   Function:

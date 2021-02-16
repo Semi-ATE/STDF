@@ -1,7 +1,7 @@
 import os
 import io
 from .STDFRecordTest import STDFRecordTest
-from ..STDF import FAR
+from ..Semi_ATE.STDF import FAR
 
 #   File Attributes Record
 #   Functuion:

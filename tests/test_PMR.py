@@ -1,7 +1,7 @@
 import os
 import io
 from .STDFRecordTest import STDFRecordTest
-from ..STDF import PMR
+from ..Semi_ATE.STDF import PMR
 
 #   Pin Map Record
 #   Function:

@@ -1,7 +1,7 @@
 import os
 import io
 from .STDFRecordTest import STDFRecordTest
-from ..STDF import MIR
+from ..Semi_ATE.STDF import MIR
 
 #   Master Information Record
 #   Function:
