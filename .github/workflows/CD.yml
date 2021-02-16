@@ -21,10 +21,18 @@ jobs:
       run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
     - name: Run tests
       run: pytest tests/ --cov=STDF
-    - name: Upload coverage to Codecov  
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        directory: ./
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: false
+#        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true      
     - name: Create package
       run: python setup.py sdist
     - name: Check package
