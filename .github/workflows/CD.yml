@@ -1,12 +1,11 @@
 name: CD
 
 on:
-  push:
-    tags:
-    - 'v*'
+  release:
+    types: [created]
 
 jobs:
-  upload-pypi:
+  make-release:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -18,13 +17,22 @@ jobs:
       run: |
           pip install -r requirements/run.txt
           pip install -r requirements/test.txt
-    - name: Build release artefacts
-      run: |
-        python setup.py sdist
-        twine check dist/*
-    - name: Publish release
+    - name: tag to version
+      run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
+    - name: Run tests
+      run: pytest tests/ --cov=STDF
+    - name: Upload coverage to Codecov  
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+    - name: Create package
+      run: python setup.py sdist
+    - name: Check package
+      run:  twine check dist/*
+    - name: Check manifest
+      run: check-manifest
+    - name: Upload to PyPI
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        python -m twine upload dist/*
+      run: python -m twine upload dist/*
