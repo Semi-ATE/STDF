@@ -1,5 +1,5 @@
 import os
-print (os.getcwd())
+print (">>>>>>>>>>>>>>>>", os.getcwd())
 
 import io
 from .STDFRecordTest import STDFRecordTest
