@@ -69,13 +69,13 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
 
 ## Stand alone
 
-### conda (preferred)
+### conda
 
 ```bash
 $ conda install Semi_ATE_STDF
 ```
 
-### pip (discouraged but possible)
+### pip
 
 ```bash
 $ pip install Semi_ATE_STDF
@@ -89,7 +89,7 @@ $ pip install Semi_ATE_STDF
 $ conda install Semi_ATE
 ```
 
-### pip (discouraged but possible)
+### pip ([discouraged](https://www.youtube.com/watch?v=Ul79ihg41Rs&t=2s) but possible)
 
 ```bash
 $ pip install Semi_ATE
