@@ -35,33 +35,33 @@ Eat that Mentor! For years you took [money-for-nothing](https://www.youtube.com/
 
 ### It is also NOT just a parser!
 
-In [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) we also need to **<ins>write</ins>** STDF files!
+In [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) we also need to **write** STDF files!
 
 Infact here are the specifications of the **Semi-ATE-STDF** library:
 
- - [<ins>Endianness</ins>](https://en.wikipedia.org/wiki/Endianness): Little & Big
- - Formats: [STDF]((/docs/standards/STDF/STDF-V4-spec.pdf)) & [ATDF](https://sourceforge.net/p/freestdf/svn/HEAD/tree/docs/atdf-spec.pdf?format=raw)
- - <ins>Versions & Extensions</ins>:
-   - ~~V3~~: support depricated
-   - V4:
-     - [standard](/docs/standards/STDF/STDF-V4-spec.pdf)
-     - [V4-2007](/docs/standards/STDF/STDF-V4-2007-spec.pdf)
-     - Memory:2010.1 (planned but not implemented yet)
- - <ins>Modes</ins>: read & write
- - <ins>compressions</ins>: (in **all** modes!)
-   - [gzip](https://www.gnu.org/software/gzip/)
-   - [lzma](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) → turns out to be the best compressor for STDF files. 🤫
-   - [bz2](https://www.sourceware.org/bzip2/)
- - <ins>encodings</ins>:
-   - [ASCII](https://en.wikipedia.org/wiki/ASCII)
-   - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python**3** itself 😎)
- - <ins>floating point extensions</ins>:
-   - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
- - <ins>Python3</ins> (support for python2 is depricated)
-   - Python 3.7
-   - Python 3.8   ---add-badges-here--- (code coverage, build)
-   - Python 3.9 
-  - <ins>Packaging</ins>:
+- [Endianness](https://en.wikipedia.org/wiki/Endianness): Little & Big
+- Formats: [STDF]((/docs/standards/STDF/STDF-V4-spec.pdf)) & [ATDF](https://sourceforge.net/p/freestdf/svn/HEAD/tree/docs/atdf-spec.pdf?format=raw)
+- Versions & Extensions:
+  - ~~V3~~: support depricated
+  - V4:
+    - [standard](/docs/standards/STDF/STDF-V4-spec.pdf)
+    - [V4-2007](/docs/standards/STDF/STDF-V4-2007-spec.pdf)
+    - Memory:2010.1 (planned but not implemented yet)
+- Modes: read & write
+- compressions: (in **all** modes!)
+  - [gzip](https://www.gnu.org/software/gzip/)
+  - [lzma](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) → turns out to be the best compressor for STDF files. 🤫
+  - [bz2](https://www.sourceware.org/bzip2/)
+- encodings:
+  - [ASCII](https://en.wikipedia.org/wiki/ASCII)
+  - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python**3** itself 😎)
+- floating point extensions:
+  - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
+- Python3 (support for python2 is depricated)
+  - Python 3.7
+  - Python 3.8   ---add-badges-here--- (code coverage, build)
+  - Python 3.9 
+  - Packaging:
     - PyPI : ---add-badges-here--- 
     - conda-forge : ---add-badges-here---
     
