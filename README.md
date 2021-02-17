@@ -33,7 +33,7 @@ The [Semi-ATE-Metis](https://github.com/Semi-ATE/Semi-ATE-Metis) project builds 
 
 Eat that Mentor! For years you took [money-for-nothing](https://www.youtube.com/watch?v=wTP2RUD_cL0), and in the end you still screwed your customers (cfr. `PAT`). [My-silver-lining](https://www.youtube.com/watch?v=DKL4X0PZz7M): now we will do some screwing! See how that feels! 😋
 
-### It is also <ins>NOT just a parser</ins>!
+### It is also NOT just a parser!
 
 In [Semi-ATE](https://github.com/Semi-ATE/Semi-ATE) we also need to **<ins>write</ins>** STDF files!
 
