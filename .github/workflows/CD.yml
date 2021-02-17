@@ -20,7 +20,7 @@ jobs:
     - name: tag to version
       run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
     - name: Run tests
-      run: pytest --cov=Semi_ATE --cov-report=xml
+      run: pytest --cov=Semi_ATE
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
