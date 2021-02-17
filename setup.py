@@ -19,7 +19,7 @@ setup(
     author='Tom Hören',
     maintainer='Semi-ATE',
     maintainer_email='info@Semi-ATE.com',
-    url="https://github.com/Semi-ATE/STDF"
+    url="https://github.com/Semi-ATE/STDF",
     license="MIT",
     keywords="Semiconductor ATE Automatic Test Equipment STDF",
     platforms=["Windows", "Linux", "Mac OS-X"],
