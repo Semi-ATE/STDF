@@ -3,6 +3,7 @@
 **STDF** stands for **S**tandard **T**est **D**ata **F**ormat
 
 [![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/Semi-ATE/STDF/blob/main/LICENSE)
+![Python >= 3.7](https://img.shields.io/badge/Python-%3E%3D3.7-blue)
 [![CI](https://github.com/Semi-ATE/STDF/workflows/CI/badge.svg?branch=main)](https://github.com/Semi-ATE/STDF/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/Semi-ATE/STDF/branch/main/graph/badge.svg?token=BAP0H9OMED)](https://codecov.io/gh/Semi-ATE/STDF)
 [![CD](https://github.com/Semi-ATE/STDF/workflows/CD/badge.svg)](https://github.com/Semi-ATE/STDF/actions?query=workflow%3ACD)
@@ -57,7 +58,7 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
   - [UTF-8](https://en.wikipedia.org/wiki/UTF-8) (added to support things like 'ηA', 'μV', '°C', '-∞', ... but also to make STDF compatible with python**3** itself 😎)
 - floating point extensions:
   - [IEEE 754-1985](https://en.wikipedia.org/wiki/IEEE_754-1985) (aka: NaN, nan, Infinity, Inf, inf, ...)
-- Python3 (support for python2 is depricated)
+- [Python 3 only](https://img.shields.io/badge/Python3-only-red) (support for python2 is depricated)
   - Python 3.7
   - Python 3.8   ---add-badges-here--- (code coverage, build)
   - Python 3.9 
