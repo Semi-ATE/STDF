@@ -1,6 +1,6 @@
 # Semi-ATE's STDF library
 
-STDF stands for **S**tandard **T**est **D**ata **F**ormat
+**STDF** stands for **S**tandard **T**est **D**ata **F**ormat
 
 [![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/Semi-ATE/STDF/blob/main/LICENSE)
 [![CI](https://github.com/Semi-ATE/STDF/workflows/CI/badge.svg?branch=main)](https://github.com/Semi-ATE/STDF/actions?query=workflow%3ACI)
@@ -11,7 +11,7 @@ STDF stands for **S**tandard **T**est **D**ata **F**ormat
 ![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)
 
 
-### This library is NOT intended to be the <ins>fastes in the world</ins>!
+### This library is NOT intended to be the fastes in the world!
 
 Often people are searching for 'the fastest' STDF parser. If this is what you are after, [keep on looking](https://en.wikipedia.org/wiki/Standard_Test_Data_Format) and by all means, hit the wall later on, and at that point you might consider to return! 🤣
 
