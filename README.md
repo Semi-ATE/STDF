@@ -72,13 +72,13 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
 ### conda
 
 ```bash
-$ conda install Semi_ATE_STDF
+$ conda install Semi-ATE-STDF
 ```
 
 ### pip
 
 ```bash
-$ pip install Semi_ATE_STDF
+$ pip install Semi-ATE-STDF
 ```
 
 ## As part of the Semi-ATE suit
@@ -86,13 +86,13 @@ $ pip install Semi_ATE_STDF
 ### conda (preferred)
 
 ```bash
-$ conda install Semi_ATE
+$ conda install Semi-ATE
 ```
 
 ### pip ([discouraged](https://www.youtube.com/watch?v=Ul79ihg41Rs&t=2s) but possible)
 
 ```bash
-$ pip install Semi_ATE
+$ pip install Semi-ATE
 ```
 
 # Usage examples
@@ -103,7 +103,7 @@ This STDF library is a part of the Semi-ATE suit, and it shares the namespace.
 ## print an STDF in a human readable form on the standard output
 
 ```python
-from Semi_ATE.data import STDF
+from Semi_ATE import STDF
 
 for REC in STDF.records_from_file("blahbla.stdf"):
     print(REC)
@@ -112,7 +112,7 @@ for REC in STDF.records_from_file("blahbla.stdf"):
 ## work with a STDF file storred in compressed form (lzma)
 
 ```python
-from Semi_ATE.data import STDF
+from Semi_ATE import STDF
 
 for REC in STDF.records_from_file("blahbla.stdf.xz"):
     print(REC)
@@ -121,7 +121,7 @@ for REC in STDF.records_from_file("blahbla.stdf.xz"):
 ## convert an STDF file into an ATDF file
 
 ```python
-from Semi_ATE.data import STDF
+from Semi_ATE import STDF
 
 basename = "blahblah"
 
