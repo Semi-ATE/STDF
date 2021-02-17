@@ -16,8 +16,10 @@ setup(
     description="Library to read/write STDF/ATDF files",
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
-    author="Semi-ATE",
-    author_email="info@Semi-ATE.com",
+    author='Tom Hören',
+    maintainer='Semi-ATE',
+    maintainer_email='info@Semi-ATE.com',
+    url="https://github.com/Semi-ATE/starz"
     license="MIT",
     keywords="Semiconductor ATE Automatic Test Equipment STDF",
     platforms=["Windows", "Linux", "Mac OS-X"],
