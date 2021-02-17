@@ -62,7 +62,7 @@ Infact here are the specifications of the **Semi-ATE-STDF** library:
   - Python 3.7
   - Python 3.8   ---add-badges-here--- (code coverage, build)
   - Python 3.9 
-- Packaging: [![PyPI](https://img.shields.io/pypi/v/Semi-ATE-STDF?color=blue&label=PyPI)](https://pypi.org/project/Semi-ATE-STDF/) [![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)]()
+- Packaging: [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Semi-ATE/STDF?color=blue&label=GitHub&sort=semver)](https://github.com/Semi-ATE/STDF/releases/latest) [![PyPI](https://img.shields.io/pypi/v/Semi-ATE-STDF?color=blue&label=PyPI)](https://pypi.org/project/Semi-ATE-STDF/) [![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)]()
     
 # Installation
 
