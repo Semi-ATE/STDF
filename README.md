@@ -2,7 +2,7 @@
 
 [![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/Semi-ATE/STDF/blob/main/LICENSE)
 [![CI](https://github.com/Semi-ATE/STDF/workflows/CI/badge.svg?branch=main)](https://github.com/Semi-ATE/STDF/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/Semi-ATE/STDF/branch/main/graph/badge.svg)](https://codecov.io/gh/Semi-ATE/STDF)
+[![codecov](https://codecov.io/gh/Semi-ATE/STDF/branch/main/graph/badge.svg?token=BAP0H9OMED)](https://codecov.io/gh/Semi-ATE/STDF)
 [![CD](https://github.com/Semi-ATE/STDF/workflows/CD/badge.svg)](https://github.com/Semi-ATE/STDF/actions?query=workflow%3ACD)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Semi-ATE/STDF?color=blue&label=GitHub&sort=semver)](https://github.com/Semi-ATE/STDF/releases/latest)
 [![PyPI](https://img.shields.io/pypi/v/Semi-ATE-STDF?color=blue&label=PyPI)](https://pypi.org/project/Semi-ATE-STDF/)
