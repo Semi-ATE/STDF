@@ -87,7 +87,7 @@ $ pip install Semi-ATE-STDF
 $ conda install Semi-ATE
 ```
 
-### pip ([discouraged](https://www.youtube.com/watch?v=Ul79ihg41Rs&t=2s) but possible)
+### pip ([discouraged](https://www.youtube.com/watch?v=Ul79ihg41Rs&t=2s) as Semi-ATE holds a plugin for [Spyder](https://github.com/spyder-ide/spyder))
 
 ```bash
 $ pip install Semi-ATE
