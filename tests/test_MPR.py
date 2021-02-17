@@ -451,4 +451,8 @@ def mpr(endian):
     stdfRecTest.assert_ubyte(len(alarm_id))
     stdfRecTest.assert_char_array(len(alarm_id), alarm_id);
 
+#   Test printing when the record is empty
+    empty = MPR('V4', endian)
+    print(empty)
+
 #   ToDo: Test JSON output
