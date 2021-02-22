@@ -421,4 +421,8 @@ def mir(endian):
 #   Test ATDF output
     assert inst.to_atdf() == expected_atdf
 
+#   Test printing when the record is empty
+    empty = MIR('V4', endian)
+    print(empty)
+
 #   ToDo: Test JSON output

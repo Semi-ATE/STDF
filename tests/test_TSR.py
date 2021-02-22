@@ -312,5 +312,8 @@ def tsr(endian):
     stdfRecTest.assert_ubyte(len(test_lbl))
     stdfRecTest.assert_char_array(len(test_lbl), test_lbl)
 
+#   Test printing when the record is empty
+    empty = TSR('V4', endian)
+    print(empty)
 
 #   ToDo: Test JSON output

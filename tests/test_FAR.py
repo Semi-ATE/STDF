@@ -49,4 +49,8 @@ def far(endian):
     expected_atdf = "FAR:A|4|2|U"
     assert inst.to_atdf() == expected_atdf
 
+#   Test printing when the record is empty
+    empty = FAR('V4', endian)
+    print(empty)
+
 #   ToDo: Test JSON output

@@ -1969,8 +1969,10 @@ class STDR(ABC):
             if self.fields[sequence[field]]['Ref'] != None:
                 retval += " -> %s" % self.fields[sequence[field]]['Ref']
             if sequence[field] in time_fields:
-                local_unix_time_stamp = float(self.fields[sequence[field]]['Value'])
-                retval += " = %s" % _stdf_time_field_value_to_string(float(self.fields[sequence[field]]['Value']))
+                time_value = self.fields[sequence[field]]['Value']
+                if time_value != None:
+                    local_unix_time_stamp = float(time_value)
+                    retval += " = %s" % _stdf_time_field_value_to_string(float(time_value))
             retval += "\n"
         return retval
 
