@@ -15,6 +15,10 @@
 ![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)
 
 
+[![GitHub issues](https://img.shields.io/github/issues/Semi-ATE/Semi-ATE-STDF)](https://github.com/Semi-ATE/Semi-ATE-STDF/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Semi-ATE/Semi-ATE-STDF)](https://github.com/Semi-ATE/Semi-ATE-STDF/pulls)
+
+
 ### This library is NOT intended to be the fastest in the world!
 
 Often people are searching for 'the fastest' STDF parser. If this is what you are after, [keep on looking](https://en.wikipedia.org/wiki/Standard_Test_Data_Format) and by all means, hit the wall later on, and at that point you might consider to return! 🤣
