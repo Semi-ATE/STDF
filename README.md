@@ -1,6 +1,6 @@
 # Semi-ATE's STDF library
 
-**STDF** stands for **S**tandard **T**est **D**ata **F**ormat
+**S**tandard **T**est **D**ata **F**ormat
 
 [![GitHub](https://img.shields.io/github/license/Semi-ATE/STDF?color=black)](https://github.com/Semi-ATE/STDF/blob/main/LICENSE)
 [![Conda](https://img.shields.io/conda/pn/conda-forge/Semi-ATE-STDF?color=black)](https://anaconda.org/conda-forge/Semi-ATE-STDF)
