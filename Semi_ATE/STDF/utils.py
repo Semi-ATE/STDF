@@ -9,18 +9,24 @@ import struct
 import sys
 import io
 
-from .STDR import ts_to_id
-from . import supported
-from . import (ATR, BPS, DTR, EPS, FAR, FTR, GDR, HBR, MIR, MPR, MRR, PCR, PGR, PIR, PLR, PMR, PRR, PTR, RDR, SBR, SDR, TSR, WIR, WCR, WRR)
+from . import (ATR, BPS, DTR, EPS, FAR, FTR, GDR, HBR, MIR, MPR, MRR,
+               PCR, PGR, PIR, PLR, PMR, PRR, PTR, RDR, SBR, SDR, TSR, WIR, WCR, WRR)
+
+from Semi_ATE.STDF.STDR import STDFError
+from Semi_ATE.STDF.STDR import get_STDF_setup_from_file
+from Semi_ATE.STDF.STDR import get_bytes_from_file
+from Semi_ATE.STDF.STDR import ts_to_id
+from Semi_ATE.STDF.STDR import id_to_ts
+from Semi_ATE.STDF.STDR import supported
 
 #from ATE.utils.compression import default_compression
 #from ATE.utils.compression import get_deflated_file_size
 #from ATE.utils.compression import supported_compressions
-from ATE.utils.compression import supported_compressions_extensions
-from ATE.utils.magicnumber import extension_from_magic_number_in_file
-from ATE.utils.magicnumber import is_compressed_file
-from ATE.utils.varia import os_is_case_sensitive
-from ATE.utils.varia import path_is_writeable_by_me
+#from ATE.utils.compression import supported_compressions_extensions
+#from ATE.utils.magicnumber import extension_from_magic_number_in_file
+#from ATE.utils.magicnumber import is_compressed_file
+#from ATE.utils.varia import os_is_case_sensitive
+#from ATE.utils.varia import path_is_writeable_by_me
 
 # def stdfopen(FileName, mode='rb'):
 #     '''
@@ -1665,7 +1671,7 @@ def has_valid_STDF_extension(FileName):
     else:
         regex = r'STD'
     elements = re.split(regex, FileName)
-    if len(elements)==1:
+    if len(elements) == 1:
         return False
     return True
 
@@ -1675,13 +1681,17 @@ def has_pretty_STDF_extension(FileName):
     looks if the (supported) compressed file name ends with '.std.xx' or '.stdf.xx'
     here xx are the supported compression extensions
     '''
-    if not has_valid_STDF_extension(FileName): return False # based on filename
-    if not is_STDF(FileName): return False # based on contents
+    if not has_valid_STDF_extension(FileName):
+        return False  # based on filename
+    if not is_STDF(FileName):
+        return False  # based on contents
     if is_compressed_file(FileName, list(supported_compressions_extensions)):
         ext = extension_from_magic_number_in_file(FileName)
-        if len(ext)==1 and (FileName.upper().endswith(".STD%s" % ext[0].upper()) or FileName.upper().endswith('.STDF%s' % ext[0].upper())): return True
+        if len(ext) == 1 and (FileName.upper().endswith(".STD%s" % ext[0].upper()) or FileName.upper().endswith('.STDF%s' % ext[0].upper())):
+            return True
     else:
-        if FileName.upper().endswith(".STD") or FileName.upper().endswith('.STDF'): return True
+        if FileName.upper().endswith(".STD") or FileName.upper().endswith('.STDF'):
+            return True
     return False
 
 def set_pretty_STDF_extension(FileName, use_hash=False):
@@ -1768,9 +1778,12 @@ def is_supported_compressed_STDF_file(FileName):
     '''
     Returns True if FileName is a supported compressed file, False otherwise
     '''
-    if not is_STDF(FileName): return False
-    ext = extension_from_magic_number_in_file(FileName, supported_compressions_extensions)
-    if len(ext)!=1: return False
+    if not is_STDF(FileName):
+        return False
+    ext = extension_from_magic_number_in_file(
+        FileName, supported_compressions_extensions)
+    if len(ext) != 1:
+        return False
     return True
 
 def endian_and_version_from_file(FileName):
@@ -1781,7 +1794,7 @@ def endian_and_version_from_file(FileName):
     tmp = records_from_file(FileName)
     endian = ''
     version = ''
-    if tmp!=None: # success
+    if tmp != None:  # success
         endian = tmp.endian
         version = tmp.version
     return endian, version
@@ -1791,9 +1804,11 @@ def MIR_from_file(FileName):
     return *THE* MIR object from FileName.
     '''
     endian, version = endian_and_version_from_file(FileName)
-    if endian=='' or version=='': return MIR()
+    if endian == '' or version == '':
+        return MIR()
     for _, REC_TYP, REC_SUB, REC in records_from_file(FileName):
-        if REC_TYP==1 and REC_SUB==10: break
+        if REC_TYP == 1 and REC_SUB == 10:
+            break
     return MIR(version, endian, REC)
 
 def SDRs_from_file(FileName):
@@ -1803,9 +1818,11 @@ def SDRs_from_file(FileName):
     retval = []
     endian, version = endian_and_version_from_file(FileName)
     print(endian, version)
-    if endian=='' or version=='': return retval
+    if endian == '' or version == '':
+        return retval
     for _, REC_TYP, REC_SUB, REC in records_from_file(FileName):
-        if (REC_TYP, REC_SUB) not in [(0, 10), (0, 20),(1, 10),(1, 70), (1, 80)]: break
+        if (REC_TYP, REC_SUB) not in [(0, 10), (0, 20), (1, 10), (1, 70), (1, 80)]:
+            break
         if (REC_TYP, REC_SUB) == (1, 80):
             retval.append(REC)
     return retval
@@ -1840,13 +1857,13 @@ def HEAD_NUM_and_SITE_NUM_from_record(record):
     REC_TYP, REC_SUB = TS_from_record(record)
     HEAD_NUM = 0
     SITE_NUM = 0
-    if REC_TYP == 15: # PTR, MTR & FTR
+    if REC_TYP == 15:  # PTR, MTR & FTR
         if REC_SUB in [10, 15, 20]:
             HEAD_NUM, SITE_NUM = struct.unpack("BB", record[8:10])
-    elif REC_TYP == 5: # PIR, PRR
+    elif REC_TYP == 5:  # PIR, PRR
         if REC_SUB in [10, 20, 30]:
             HEAD_NUM, SITE_NUM = struct.unpack("BB", record[4:6])
-    elif REC_TYP == 1: # PCR, HBR, SBR
+    elif REC_TYP == 1:  # PCR, HBR, SBR
         if REC_SUB in [30, 40, 50]:
             HEAD_NUM, SITE_NUM = struct.unpack("BB", record[4:6])
     return HEAD_NUM, SITE_NUM
@@ -1869,7 +1886,8 @@ def TEST_NUM_from_record(record, endian):
         TEST_NUM = struct.unpack("%sI" % endian, record[4:7])
     return TEST_NUM
 
-class records_from_file(object):
+
+class check_records_from_file(object):
     '''
     This is a *QUICK* iterator class that returns the next record from an STDF file each time it is called.
     It is fast because it doesn't check versions, extensions and it doesn't unpack the record and skips unknown records.
@@ -1877,32 +1895,41 @@ class records_from_file(object):
     '''
     def __init__(self, FileName):
         self.fd = None
-        if not isinstance(FileName, str): return
-        if not os.path.exists(FileName): return
-        if not os.path.isfile(FileName): return
-        if not is_STDF(FileName): return
+        if not isinstance(FileName, str):
+            return
+        if not os.path.exists(FileName):
+            return
+        if not os.path.isfile(FileName):
+            return
+        if not is_STDF(FileName):
+            return
         if is_supported_compressed_STDF_file(FileName):
             ext = extension_from_magic_number_in_file(FileName)
-            if len(ext)!=1: return
+            if len(ext) != 1:
+                return
             compression = supported_compressions_extensions[ext[0]]
-            if compression=='lzma':
+            if compression == 'lzma':
                 import lzma
                 self.fd = lzma.open(FileName, 'rb')
-            elif compression=='bz2':
+            elif compression == 'bz2':
                 import bz2
                 self.fd = bz2.open(FileName, 'rb')
-            elif compression=='gzip':
+            elif compression == 'gzip':
                 import gzip
                 self.fd = gzip.open(FileName, 'rb')
             else:
-                raise Exception("the %s compression is supported but not fully implemented." % compression)
+                raise Exception(
+                    "the %s compression is supported but not fully implemented." % compression)
         else:
             self.fd = open(FileName, 'rb')
         buff = self.fd.read(6)
         CPU_TYPE, STDF_VER = struct.unpack('BB', buff[4:])
-        if CPU_TYPE == 1: self.endian = '>'
-        elif CPU_TYPE == 2: self.endian = '<'
-        else: self.endian = '?'
+        if CPU_TYPE == 1:
+            self.endian = '>'
+        elif CPU_TYPE == 2:
+            self.endian = '<'
+        else:
+            self.endian = '?'
         self.version = 'V%s' % STDF_VER
         self.fd.seek(0)
         self.unpack_fmt = '%sHBB' % self.endian
@@ -1915,17 +1942,129 @@ class records_from_file(object):
         return self
 
     def __next__(self):
-        while self.fd!=None:
+        while self.fd != None:
             while True:
                 header = self.fd.read(4)
-                if len(header)!=4:
+                if len(header) != 4:
                     raise StopIteration
-                REC_LEN, REC_TYP, REC_SUB = struct.unpack(self.unpack_fmt, header)
+                REC_LEN, REC_TYP, REC_SUB = struct.unpack(
+                    self.unpack_fmt, header)
                 footer = self.fd.read(REC_LEN)
-                if len(footer)!=REC_LEN:
+                if len(footer) != REC_LEN:
                     raise StopIteration
                 return REC_LEN, REC_TYP, REC_SUB, header+footer
 
+def object_from_json(json):
+    '''
+    ToDo
+
+    Parameters
+    ----------
+    object : json string
+
+    Returns
+    -------
+    STDR objects like MIR, FAR etc..
+
+    '''
+extensions = {'.gz'   : [[(0, b'\x1f\x8b\x08')]], # gzip
+              '.pdf'  : [[(0, b'\x25\x50\x44\x46\x2d')]],
+              '.wav'  : [[(0, b'\x52\x49\x46\x46'), (8, b'\x57\x41\x56\x45')]],
+              '.avi'  : [[(0, b'\x52\x49\x46\x46'), (8, b'\x41\x56\x49\x20')]],
+              '.mp3'  : [[(0, b'\xFF\xFB')],
+                         [(0, b'\x49\x44\x33')]],
+              '.stdf' : [[(2, b'\x00\x0A')]],
+              '.rpm'  : [[(0, b'\xed\xab\xee\xdb')]],
+              '.ico'  : [[(0, b'\x00\x00\x01\x00')]],
+              '.z'    : [[(0, b'\x1F\x9D')],
+                         [(0, b'1F A0')]],
+              '.bz2'  : [[(0, b'\x42\x5A\x68')]],
+              '.gif'  : [[(0, b'\x47\x49\x46\x38\x37\x61')],
+                         [(0, b'\x47\x49\x46\x38\x39\x61')]],
+              '.tiff' : [[(0, b'\x49\x49\x2A\x00')],
+                         [(0, b'\x4D\x4D\x00\x2A')]],
+              '.exr'  : [[(0, b'\x76\x2F\x31\x01')]],
+              '.bpg'  : [[(0, b'\x42\x50\x47\xFB')]],
+              '.jpg'  : [[(0, b'\xFF\xD8\xFF\xDB')],
+                         [(0, b'\xFF\xD8\xFF\xE0\x00\x10\x4A\x46\x49\x46\x00\x01')],
+                         [(0, b'\xFF\xD8\xFF\xEE')],
+                         [(0, b'\xFF\xD8\xFF\xE1'), (6, b'\x45\x78\x69\x66\x00\x00')]],
+              '.lz'   : [[(0, b'\x4C\x5A\x49\x50')]],
+              '.xls'  : [[(0, b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1')]],
+              '.zip'  : [[(0, b'\x50\x4B\x03\x04')],
+                         [(0, b'\x50\x4B\x05\x06')],
+                         [(0, b'\x50\x4B\x07\x08')]],
+              '.rar'  : [[(0, b'\x52\x61\x72\x21\x1A\x07\x00')],
+                         [(0, b'\x52\x61\x72\x21\x1A\x07\x01\x00')]],
+              '.png'  : [[(0, b'\x89\x50\x4E\x47\x0D\x0A\x1A\x0A')]],
+              '.ps'   : [[(0, b'\x25\x21\x50\x53')]],
+              '.ogg'  : [[(0, b'\x4F\x67\x67\x53')]],
+              '.psd'  : [[(0, b'\x38\x42\x50\x53')]],
+              '.bmp'  : [[(0, b'\x42\x4D')]],
+              '.iso'  : [[(0, b'\x43\x44\x30\x30\x31')]],
+              '.flac' : [[(0, b'\x66\x4C\x61\x43')]],
+              '.midi' : [[(0, b'\x4D\x54\x68\x64')]],
+              '.vmdk' : [[(0, b'\x4B\x44\x4D')]],
+              '.dmg'  : [[(0, b'\x78\x01\x73\x0D\x62\x62\x60')]],
+              '.xar'  : [[(0, b'\x78\x61\x72\x21')]],
+              '.tar'  : [[(0, b'\x75\x73\x74\x61\x72\x00\x30\x30')],
+                         [(0, b'\x75\x73\x74\x61\x72\x20\x20\x00')]],
+              '.7z'   : [[(0, b'\x37\x7A\xBC\xAF\x27\x1C')]], # 7-Zip
+              '.xz'   : [[(0, b'\xFD\x37\x7A\x58\x5A\x00\x00')]], # lzma
+              '.XML'  : [[(0, b'\x3c\x3f\x78\x6d\x6c\x20')]],
+              '.swf'  : [[(0, b'\x43\x57\x53')],
+                         [(0, b'\x46\x57\x53')]],
+              '.deb'  : [[(0, b'\x21\x3C\x61\x72\x63\x68\x3E')]],
+              '.rtf'  : [[(0, b'\x7B\x5C\x72\x74\x66\x31')]],
+              '.xcf'  : [[(0, b'\x67\x69\x6d\x70\x20\x78\x63\x66\x20')]],
+              '.xlsx' : [[(0, b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1')], #password protected
+                         [(0, b'\x50\x4B\x03\x04\x14\x00\x06\x00')]], # not password protected
+              '.docx' : [[(0, b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1')], #password protected
+                         [(0, b'\x50\x4B\x03\x04\x14\x00\x06\x00')]], # not password protected
+              '.pptx' : [[(0, b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1')], #password protected
+                         [(0, b'\x50\x4B\x03\x04\x14\x00\x06\x00')]], # not password protected
+
+              }    
+known_extensions = [ext for ext in extensions]
+
+def extension_from_magic_number_in_file(FileName, extensions_of_interest=known_extensions):
+    '''
+    This function will try to determine the type of 'FileName' by looking at it's contents.
+    returns the supposed extension (with the '.') of the fileType or None if nothing is recognized.
+    Note: it doesn't look at the extension of a filename like 'mimetypes' does !
+    Ref: https://en.wikipedia.org/wiki/List_of_file_signatures
+    '''
+    debug = False
+    prv = []
+    if debug: print(FileName)
+    if os.path.exists(FileName) and os.path.isfile(FileName):
+        with open(FileName, 'rb') as fd:
+            for extension in extensions:
+                possibilities = len(extensions[extension])
+                if debug: print("\t'%s'" % extension)
+                for possibility, magic_number in enumerate(extensions[extension]):
+                    parts = len(magic_number)
+                    if debug: print("\t\tPossibility %s/%s has %s parts: '%s'" % (possibility+1, possibilities, parts, magic_number))
+                    tmp = []
+                    for part, definition in enumerate(magic_number):
+                        offset, pattern = definition
+                        if debug: print("\t\t\t part=%s/%s : offset = %d, magic = %s, lenght = %d bytes" % (part+1, parts, definition[0], definition[1], len(pattern)), end = '')
+                        fd.seek(offset)
+                        data = fd.read(len(pattern))
+                        if debug: print(" --> %s == %s ? " % (data, pattern), end='')
+                        if data == pattern:
+                            tmp.append(extension)
+                            if debug: print('YES')
+                        else:
+                            if debug: print('NO')
+                    if len(tmp) == parts:
+                        prv.append(extension)
+    retval = []
+    for ext in prv:
+        if ext in extensions_of_interest:
+            retval.append(ext)
+    return retval
+    
 class records_from_file(object):
     '''
     Generator class to run over the records in FileName.
@@ -1938,32 +2077,48 @@ class records_from_file(object):
     debug = False
 
     def __init__(self, FileName, unpack=False, of_interest=None):
-        if self.debug: print("initializing 'records_from_file")
+        if self.debug:
+            print("initializing 'records_from_file")
         if isinstance(FileName, str):
             self.keep_open = False
             if not os.path.exists(FileName):
-                raise STDFError("'%s' does not exist")
-            self.endian = get_STDF_setup_from_file(FileName)[0]
-            self.version = 'V%s' % struct.unpack('B', get_bytes_from_file(FileName, 5, 1))
-            self.fd = open(FileName, 'rb')
+                raise STDFError("'%s' does not exist" %(FileName))
+#           seimit : adding support for compressed files
+            compression = extension_from_magic_number_in_file(FileName)
+            if compression[0] == '.xz':
+                import lzma
+                self.fd = lzma.open(FileName, 'rb')
+                self.parse_FAR()
+            elif compression[0] == '.bz2':
+                import bz2
+                self.fd = bz2.open(FileName, 'rb')
+                self.parse_FAR()
+            elif compression[0] == '.gz':
+                import gzip
+                self.fd = gzip.open(FileName, 'rb')
+                self.parse_FAR()
+            elif compression[0] == '.zip':
+                import zipfile
+                zfile = zipfile.ZipFile(FileName, 'r')
+                for name in zfile.namelist():
+                    self.fd = zfile.open(name)
+                    self.parse_FAR()
+            else:
+                # Assume standard binary stdf file
+                self.endian = get_STDF_setup_from_file(FileName)[0]
+                self.version = 'V%s' % struct.unpack(
+                    'B', get_bytes_from_file(FileName, 5, 1))
+                self.fd = open(FileName, 'rb')
         elif isinstance(FileName, io.IOBase):
             self.keep_open = True
             self.fd = FileName
-            ptr = self.fd.tell()
-            self.fd.seek(4)
-            buff = self.fd.read(2)
-            CPU_TYPE, STDF_VER = struct.unpack('BB', buff)
-            if CPU_TYPE == 1: self.endian = '>'
-            elif CPU_TYPE == 2: self.endian = '<'
-            else: self.endian = '?'
-            self.version = 'V%s' % STDF_VER
-            self.fd.seek(ptr)
+            self.parse_FAR()
         else:
-            raise STDFError("'%s' is not a string or an open file descriptor")
+            raise STDFError("'%s' is not a string or an open file descriptor" %(FileName))
         self.unpack = unpack
         self.fmt = '%sHBB' % self.endian
         TS2ID = ts_to_id(self.version)
-        if of_interest==None:
+        if of_interest == None:
             self.records_of_interest = TS2ID
         elif isinstance(of_interest, list):
             ID2TS = id_to_ts(self.version)
@@ -1973,13 +2128,29 @@ class records_from_file(object):
                     if item in ID2TS:
                         if ID2TS[item] not in tmp_list:
                             tmp_list.append(ID2TS[item])
-                elif isinstance(item, tuple) and len(item)==2:
+                elif isinstance(item, tuple) and len(item) == 2:
                     if item in TS2ID:
                         if item not in tmp_list:
                             tmp_list.append(item)
             self.records_of_interest = tmp_list
         else:
-            raise STDFError("objects_from_file(%s, %s) : Unsupported of_interest" % (FileName, of_interest))
+            raise STDFError("objects_from_file(%s, %s) : Unsupported of_interest" % (
+                FileName, of_interest))
+
+    def parse_FAR(self):
+        ptr = self.fd.tell()
+        self.fd.seek(4)
+        buff = self.fd.read(2)
+        CPU_TYPE, STDF_VER = struct.unpack('BB', buff)
+        if CPU_TYPE == 1:
+            self.endian = '>'
+        elif CPU_TYPE == 2:
+            self.endian = '<'
+        else:
+            self.endian = '?'
+        self.version = 'V%s' % STDF_VER
+        self.fd.seek(ptr)
+
 
     def __del__(self):
         if not self.keep_open:
@@ -1989,37 +2160,54 @@ class records_from_file(object):
         return self
 
     def __next__(self):
-        while self.fd!=None:
+        while self.fd != None:
             header = self.fd.read(4)
-            if len(header)!=4:
+            if len(header) != 4:
                 raise StopIteration
             else:
                 REC_LEN, REC_TYP, REC_SUB = struct.unpack(self.fmt, header)
                 footer = self.fd.read(REC_LEN)
                 if (REC_TYP, REC_SUB) in self.records_of_interest:
-                    if len(footer)!=REC_LEN:
+                    if len(footer) != REC_LEN:
                         raise StopIteration()
                     else:
-                        if self.unpack:
-                            return REC_LEN, REC_TYP, REC_SUB, create_record_object(self.version, self.endian, (REC_TYP, REC_SUB), header+footer)
-                        else:
-                            return REC_LEN, REC_TYP, REC_SUB, header+footer
-
+                        return create_record_object(self.version, self.endian, (REC_TYP, REC_SUB), header+footer)
+#                       seimit: the old code, does not corresponds to the README file
+#                        if self.unpack:
+#                            return REC_LEN, REC_TYP, REC_SUB, create_record_object(self.version, self.endian, (REC_TYP, REC_SUB), header+footer)
+#                        else:
+#                            return REC_LEN, REC_TYP, REC_SUB, header+footer
+#
+#                       The code from the README will fail always because the code
+#                       returns a tuple (REC_LEN, REC_TYP, REC_SUB, header+footer):
+#                           for REC in STDF.records_from_file(f.name):
+#                               print(REC.to_atdf())
+#
+#                       The correct README example according the code must be
+#                           for REC in STDF.records_from_file(f.name, unpack=True):
+#                               print(REC[3].to_atdf())
+#
+#                       To fix issue #18 I changed the code, just to return the 
+#                       record's object which will fix the issue.
 
 def create_record_object(Version, Endian, REC_ID, REC=None):
     '''
     This function will create and return the appropriate Object for REC
     based on REC_ID. REC_ID can be a 2-element tuple or a string.
     If REC is not None, then the record will also be unpacked.
+    
+    ToDo : 
+        records from STDF v.3 must be removed
+        records from STDF v.4 extension must be comment out for now
     '''
     retval = None
-    REC_TYP=-1
-    REC_SUB=-1
+    REC_TYP = -1
+    REC_SUB = -1
     if Version not in supported().versions():
         raise STDFError("Unsupported STDF Version : %s" % Version)
     if Endian not in ['<', '>']:
         raise STDFError("Unsupported Endian : '%s'" % Endian)
-    if isinstance(REC_ID, tuple) and len(REC_ID)==2:
+    if isinstance(REC_ID, tuple) and len(REC_ID) == 2:
         TS2ID = ts_to_id(Version)
         if (REC_ID[0], REC_ID[1]) in TS2ID:
             REC_TYP = REC_ID[0]
@@ -2032,60 +2220,115 @@ def create_record_object(Version, Endian, REC_ID, REC=None):
     else:
         raise STDFError("Unsupported REC_ID : %s" % REC_ID)
 
-    if REC_TYP!=-1 and REC_SUB!=-1:
-        if REC_ID == 'PTR': retval = PTR(Version, Endian, REC)
-        elif REC_ID == 'FTR': retval = FTR(Version, Endian, REC)
-        elif REC_ID == 'MPR': retval = MPR(Version, Endian, REC)
-        elif REC_ID == 'STR': retval = STR(Version, Endian, REC)
-        elif REC_ID == 'MTR': retval = MTR(Version, Endian, REC)
-        elif REC_ID == 'PIR': retval = PIR(Version, Endian, REC)
-        elif REC_ID == 'PRR': retval = PRR(Version, Endian, REC)
-        elif REC_ID == 'FAR': retval = FAR(Version, Endian, REC)
-        elif REC_ID == 'ATR': retval = ATR(Version, Endian, REC)
-        elif REC_ID == 'VUR': retval = VUR(Version, Endian, REC)
-        elif REC_ID == 'MIR': retval = MIR(Version, Endian, REC)
-        elif REC_ID == 'MRR': retval = MRR(Version, Endian, REC)
-        elif REC_ID == 'WCR': retval = WCR(Version, Endian, REC)
-        elif REC_ID == 'WIR': retval = WIR(Version, Endian, REC)
-        elif REC_ID == 'WRR': retval = WRR(Version, Endian, REC)
-        elif REC_ID == 'ADR': retval = ADR(Version, Endian, REC)
-        elif REC_ID == 'ASR': retval = ASR(Version, Endian, REC)
-        elif REC_ID == 'BPS': retval = BPS(Version, Endian, REC)
-        elif REC_ID == 'BRR': retval = BRR(Version, Endian, REC)
-        elif REC_ID == 'BSR': retval = BSR(Version, Endian, REC)
-        elif REC_ID == 'CNR': retval = CNR(Version, Endian, REC)
-        elif REC_ID == 'DTR': retval = DTR(Version, Endian, REC)
-        elif REC_ID == 'EPDR': retval = EPDR(Version, Endian, REC)
-        elif REC_ID == 'EPS': retval = EPS(Version, Endian, REC)
-        elif REC_ID == 'ETSR': retval = ETSR(Version, Endian, REC)
-        elif REC_ID == 'FDR': retval = FDR(Version, Endian, REC)
-        elif REC_ID == 'FSR': retval = FSR(Version, Endian, REC)
-        elif REC_ID == 'GDR': retval = GDR(Version, Endian, REC)
-        elif REC_ID == 'GTR': retval = GTR(Version, Endian, REC)
-        elif REC_ID == 'HBR': retval = HBR(Version, Endian, REC)
-        elif REC_ID == 'IDR': retval = IDR(Version, Endian, REC)
-        elif REC_ID == 'MCR': retval = MCR(Version, Endian, REC)
-        elif REC_ID == 'MMR': retval = MMR(Version, Endian, REC)
-        elif REC_ID == 'MSR': retval = MSR(Version, Endian, REC)
-        elif REC_ID == 'NMR': retval = NMR(Version, Endian, REC)
-        elif REC_ID == 'PCR': retval = PCR(Version, Endian, REC)
-        elif REC_ID == 'PDR': retval = PDR(Version, Endian, REC)
-        elif REC_ID == 'PGR': retval = PGR(Version, Endian, REC)
-        elif REC_ID == 'PLR': retval = PLR(Version, Endian, REC)
-        elif REC_ID == 'PMR': retval = PMR(Version, Endian, REC)
-        elif REC_ID == 'PSR': retval = PSR(Version, Endian, REC)
-        elif REC_ID == 'RDR': retval = RDR(Version, Endian, REC)
-        elif REC_ID == 'SBR': retval = SBR(Version, Endian, REC)
-        elif REC_ID == 'SCR': retval = SCR(Version, Endian, REC)
-        elif REC_ID == 'SDR': retval = SDR(Version, Endian, REC)
-        elif REC_ID == 'SHB': retval = SHB(Version, Endian, REC)
-        elif REC_ID == 'SSB': retval = SSB(Version, Endian, REC)
-        elif REC_ID == 'SSR': retval = SSR(Version, Endian, REC)
-        elif REC_ID == 'STS': retval = STS(Version, Endian, REC)
-        elif REC_ID == 'TSR': retval = TSR(Version, Endian, REC)
-        elif REC_ID == 'WTR': retval = WTR(Version, Endian, REC)
-        elif REC_ID == 'RR1': retval = RR1(Version, Endian, REC) # can not be reached because of -1
-        elif REC_ID == 'RR2': retval = RR2(Version, Endian, REC) # can not be reached because of -1
+    if REC_TYP != -1 and REC_SUB != -1:
+        if REC_ID == 'PTR':
+            retval = PTR(Version, Endian, REC)
+        elif REC_ID == 'FTR':
+            retval = FTR(Version, Endian, REC)
+        elif REC_ID == 'MPR':
+            retval = MPR(Version, Endian, REC)
+        elif REC_ID == 'STR':
+            retval = STR(Version, Endian, REC)
+        elif REC_ID == 'MTR':
+            retval = MTR(Version, Endian, REC)
+        elif REC_ID == 'PIR':
+            retval = PIR(Version, Endian, REC)
+        elif REC_ID == 'PRR':
+            retval = PRR(Version, Endian, REC)
+        elif REC_ID == 'FAR':
+            retval = FAR(Version, Endian, REC)
+        elif REC_ID == 'ATR':
+            retval = ATR(Version, Endian, REC)
+        elif REC_ID == 'VUR':
+            retval = VUR(Version, Endian, REC)
+        elif REC_ID == 'MIR':
+            retval = MIR(Version, Endian, REC)
+        elif REC_ID == 'MRR':
+            retval = MRR(Version, Endian, REC)
+        elif REC_ID == 'WCR':
+            retval = WCR(Version, Endian, REC)
+        elif REC_ID == 'WIR':
+            retval = WIR(Version, Endian, REC)
+        elif REC_ID == 'WRR':
+            retval = WRR(Version, Endian, REC)
+        elif REC_ID == 'ADR':
+            retval = ADR(Version, Endian, REC)
+        elif REC_ID == 'ASR':
+            retval = ASR(Version, Endian, REC)
+        elif REC_ID == 'BPS':
+            retval = BPS(Version, Endian, REC)
+        elif REC_ID == 'BRR':
+            retval = BRR(Version, Endian, REC)
+        elif REC_ID == 'BSR':
+            retval = BSR(Version, Endian, REC)
+        elif REC_ID == 'CNR':
+            retval = CNR(Version, Endian, REC)
+        elif REC_ID == 'DTR':
+            retval = DTR(Version, Endian, REC)
+        elif REC_ID == 'EPDR':
+            retval = EPDR(Version, Endian, REC)
+        elif REC_ID == 'EPS':
+            retval = EPS(Version, Endian, REC)
+        elif REC_ID == 'ETSR':
+            retval = ETSR(Version, Endian, REC)
+        elif REC_ID == 'FDR':
+            retval = FDR(Version, Endian, REC)
+        elif REC_ID == 'FSR':
+            retval = FSR(Version, Endian, REC)
+        elif REC_ID == 'GDR':
+            retval = GDR(Version, Endian, REC)
+        elif REC_ID == 'GTR':
+            retval = GTR(Version, Endian, REC)
+        elif REC_ID == 'HBR':
+            retval = HBR(Version, Endian, REC)
+        elif REC_ID == 'IDR':
+            retval = IDR(Version, Endian, REC)
+        elif REC_ID == 'MCR':
+            retval = MCR(Version, Endian, REC)
+        elif REC_ID == 'MMR':
+            retval = MMR(Version, Endian, REC)
+        elif REC_ID == 'MSR':
+            retval = MSR(Version, Endian, REC)
+        elif REC_ID == 'NMR':
+            retval = NMR(Version, Endian, REC)
+        elif REC_ID == 'PCR':
+            retval = PCR(Version, Endian, REC)
+        elif REC_ID == 'PDR':
+            retval = PDR(Version, Endian, REC)
+        elif REC_ID == 'PGR':
+            retval = PGR(Version, Endian, REC)
+        elif REC_ID == 'PLR':
+            retval = PLR(Version, Endian, REC)
+        elif REC_ID == 'PMR':
+            retval = PMR(Version, Endian, REC)
+        elif REC_ID == 'PSR':
+            retval = PSR(Version, Endian, REC)
+        elif REC_ID == 'RDR':
+            retval = RDR(Version, Endian, REC)
+        elif REC_ID == 'SBR':
+            retval = SBR(Version, Endian, REC)
+        elif REC_ID == 'SCR':
+            retval = SCR(Version, Endian, REC)
+        elif REC_ID == 'SDR':
+            retval = SDR(Version, Endian, REC)
+        elif REC_ID == 'SHB':
+            retval = SHB(Version, Endian, REC)
+        elif REC_ID == 'SSB':
+            retval = SSB(Version, Endian, REC)
+        elif REC_ID == 'SSR':
+            retval = SSR(Version, Endian, REC)
+        elif REC_ID == 'STS':
+            retval = STS(Version, Endian, REC)
+        elif REC_ID == 'TSR':
+            retval = TSR(Version, Endian, REC)
+        elif REC_ID == 'WTR':
+            retval = WTR(Version, Endian, REC)
+        elif REC_ID == 'RR1':
+            # can not be reached because of -1
+            retval = RR1(Version, Endian, REC)
+        elif REC_ID == 'RR2':
+            # can not be reached because of -1
+            retval = RR2(Version, Endian, REC)
     return retval
 
 

@@ -26,5 +26,7 @@ from .TSR import TSR
 from .WCR import WCR
 from .WIR import WIR
 from .WRR import WRR
+from .STDR import STDFError
+from .utils import records_from_file
 
 __version__ = '0.0.0'

@@ -2002,7 +2002,18 @@ class STDR(ABC):
         field += '|'
             
         return field
+  
+    def to_json(self):
+        '''
+        ToDo
 
+        Returns
+        -------
+        None.
+
+        '''
+        
+        
     def to_atdf(self):
 
         sequence = {}
@@ -3060,21 +3071,21 @@ def objects_from_indexed_file(FileName, index, records_of_interest=None):
 
 
 
-# def get_bytes_from_file(FileName, Offset, Number):
-#     '''
-#     This function will return 'Number' bytes starting after 'Offset' from 'FileName'
-#     '''
-#     if not isinstance(FileName, str): raise STDFError("'%s' is not a string")
-#     if not isinstance(Offset, int): raise STDFError("Offset is not an integer")
-#     if not isinstance(Number, int): raise STDFError("Number is not an integer")
-#     if not os.path.exists(FileName): raise STDFError("'%s' does not exist")
-#     if guess_type(FileName)[1]=='gzip':
-#         raise NotImplemented("Not yet implemented")
-#     else:
-#         with open(FileName, 'rb') as fd:
-#             fd.seek(Offset)
-#             retval = fd.read(Number)
-#     return retval
+def get_bytes_from_file(FileName, Offset, Number):
+     '''
+     This function will return 'Number' bytes starting after 'Offset' from 'FileName'
+     '''
+     if not isinstance(FileName, str): raise STDFError("'%s' is not a string")
+     if not isinstance(Offset, int): raise STDFError("Offset is not an integer")
+     if not isinstance(Number, int): raise STDFError("Number is not an integer")
+     if not os.path.exists(FileName): raise STDFError("'%s' does not exist")
+     if guess_type(FileName)[1]=='gzip':
+         raise NotImplemented("Not yet implemented")
+     else:
+         with open(FileName, 'rb') as fd:
+             fd.seek(Offset)
+             retval = fd.read(Number)
+     return retval
 
 # def get_record_from_file_at_position(fd, offset, REC_LEN_FMT):
 #     fd.seek(offset)
