@@ -11,6 +11,7 @@ import gzip
 import bz2
 import lzma
 import zipfile
+import time
 from Semi_ATE import STDF
 
 def test_records_from_file():
@@ -46,9 +47,23 @@ def test_records_from_file():
     record.set_value('START_T', start_t)
     rec_len += 4;
 
+    t = ""
+    if os.name == "nt":
+        t = time.strftime("%#H:%#M:%#S %#d-%b-%Y", time.gmtime(start_t))
+    else:
+        t = time.strftime("%-H:%-M:%-S %-d-%b-%Y", time.gmtime(start_t))
+    t = t.upper()
+
+    t1 = ""
+    if os.name == "nt":
+        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_t))
+    else:
+        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_t))
+    t1 = t1.upper()
+
     data += record.__repr__()
 
-    exp_atdf_wir = 'WIR:1|1:1:1 1-JAN-2021|1|'
+    exp_atdf_wir = 'WIR:1|'+t+'|1|'
     
     exp_atdf = [exp_atdf_far, exp_atdf_wir]
 
@@ -58,7 +73,7 @@ def test_records_from_file():
       REC_SUB = \'10\' [U*1] (Record sub-type)\n\
       HEAD_NUM = \'1\' [U*1] (Test head number)\n\
       SITE_GRP = \'1\' [U*1] (Site group number)\n\
-      START_T = \'1609462861\' [U*4] (Date and time first part tested) = 2021-01-01 03:01:01\n\
+      START_T = \'1609462861\' [U*4] (Date and time first part tested) = '+t1+'\n\
       WAFER_ID = \'\' [C*n] (Wafer ID)\n'
 
     exp_stdf = [exp_stdf_far, exp_stdf_wir]
