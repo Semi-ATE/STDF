@@ -1,5 +1,0 @@
-lzma
-bz2
-gzip
-zipfile
-

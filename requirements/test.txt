@@ -6,7 +6,3 @@ setuptools
 twine
 tree
 tempfile
-lzma
-bz2
-gzip
-zipfile
