@@ -2221,117 +2221,147 @@ def create_record_object(Version, Endian, REC_ID, REC=None):
         raise STDFError("Unsupported REC_ID : %s" % REC_ID)
 
     if REC_TYP != -1 and REC_SUB != -1:
-        if REC_ID == 'PTR':
-            retval = PTR(Version, Endian, REC)
-        elif REC_ID == 'FTR':
-            retval = FTR(Version, Endian, REC)
-        elif REC_ID == 'MPR':
-            retval = MPR(Version, Endian, REC)
-        elif REC_ID == 'STR':
-            retval = STR(Version, Endian, REC)
-        elif REC_ID == 'MTR':
-            retval = MTR(Version, Endian, REC)
-        elif REC_ID == 'PIR':
-            retval = PIR(Version, Endian, REC)
-        elif REC_ID == 'PRR':
-            retval = PRR(Version, Endian, REC)
-        elif REC_ID == 'FAR':
-            retval = FAR(Version, Endian, REC)
-        elif REC_ID == 'ATR':
-            retval = ATR(Version, Endian, REC)
-        elif REC_ID == 'VUR':
-            retval = VUR(Version, Endian, REC)
-        elif REC_ID == 'MIR':
-            retval = MIR(Version, Endian, REC)
-        elif REC_ID == 'MRR':
-            retval = MRR(Version, Endian, REC)
-        elif REC_ID == 'WCR':
-            retval = WCR(Version, Endian, REC)
-        elif REC_ID == 'WIR':
-            retval = WIR(Version, Endian, REC)
-        elif REC_ID == 'WRR':
-            retval = WRR(Version, Endian, REC)
-        elif REC_ID == 'ADR':
-            retval = ADR(Version, Endian, REC)
-        elif REC_ID == 'ASR':
-            retval = ASR(Version, Endian, REC)
-        elif REC_ID == 'BPS':
-            retval = BPS(Version, Endian, REC)
-        elif REC_ID == 'BRR':
-            retval = BRR(Version, Endian, REC)
-        elif REC_ID == 'BSR':
-            retval = BSR(Version, Endian, REC)
-        elif REC_ID == 'CNR':
-            retval = CNR(Version, Endian, REC)
-        elif REC_ID == 'DTR':
-            retval = DTR(Version, Endian, REC)
-        elif REC_ID == 'EPDR':
-            retval = EPDR(Version, Endian, REC)
-        elif REC_ID == 'EPS':
-            retval = EPS(Version, Endian, REC)
-        elif REC_ID == 'ETSR':
-            retval = ETSR(Version, Endian, REC)
-        elif REC_ID == 'FDR':
-            retval = FDR(Version, Endian, REC)
-        elif REC_ID == 'FSR':
-            retval = FSR(Version, Endian, REC)
-        elif REC_ID == 'GDR':
-            retval = GDR(Version, Endian, REC)
-        elif REC_ID == 'GTR':
-            retval = GTR(Version, Endian, REC)
-        elif REC_ID == 'HBR':
-            retval = HBR(Version, Endian, REC)
-        elif REC_ID == 'IDR':
-            retval = IDR(Version, Endian, REC)
-        elif REC_ID == 'MCR':
-            retval = MCR(Version, Endian, REC)
-        elif REC_ID == 'MMR':
-            retval = MMR(Version, Endian, REC)
-        elif REC_ID == 'MSR':
-            retval = MSR(Version, Endian, REC)
-        elif REC_ID == 'NMR':
-            retval = NMR(Version, Endian, REC)
-        elif REC_ID == 'PCR':
-            retval = PCR(Version, Endian, REC)
-        elif REC_ID == 'PDR':
-            retval = PDR(Version, Endian, REC)
-        elif REC_ID == 'PGR':
-            retval = PGR(Version, Endian, REC)
-        elif REC_ID == 'PLR':
-            retval = PLR(Version, Endian, REC)
-        elif REC_ID == 'PMR':
-            retval = PMR(Version, Endian, REC)
-        elif REC_ID == 'PSR':
-            retval = PSR(Version, Endian, REC)
-        elif REC_ID == 'RDR':
-            retval = RDR(Version, Endian, REC)
-        elif REC_ID == 'SBR':
-            retval = SBR(Version, Endian, REC)
-        elif REC_ID == 'SCR':
-            retval = SCR(Version, Endian, REC)
-        elif REC_ID == 'SDR':
-            retval = SDR(Version, Endian, REC)
-        elif REC_ID == 'SHB':
-            retval = SHB(Version, Endian, REC)
-        elif REC_ID == 'SSB':
-            retval = SSB(Version, Endian, REC)
-        elif REC_ID == 'SSR':
-            retval = SSR(Version, Endian, REC)
-        elif REC_ID == 'STS':
-            retval = STS(Version, Endian, REC)
-        elif REC_ID == 'TSR':
-            retval = TSR(Version, Endian, REC)
-        elif REC_ID == 'WTR':
-            retval = WTR(Version, Endian, REC)
-        elif REC_ID == 'RR1':
-            # can not be reached because of -1
-            retval = RR1(Version, Endian, REC)
-        elif REC_ID == 'RR2':
-            # can not be reached because of -1
-            retval = RR2(Version, Endian, REC)
+        retval = create_record(Version, Endian, REC_ID, REC)
+    return retval
+
+def create_record(Version, Endian, REC_ID, REC):
+    
+    retval = None
+    
+    if REC_ID == 'PTR':
+        retval = PTR(Version, Endian, REC)
+    elif REC_ID == 'FTR':
+        retval = FTR(Version, Endian, REC)
+    elif REC_ID == 'MPR':
+        retval = MPR(Version, Endian, REC)
+    elif REC_ID == 'STR':
+        retval = STR(Version, Endian, REC)
+    elif REC_ID == 'MTR':
+        retval = MTR(Version, Endian, REC)
+    elif REC_ID == 'PIR':
+        retval = PIR(Version, Endian, REC)
+    elif REC_ID == 'PRR':
+        retval = PRR(Version, Endian, REC)
+    elif REC_ID == 'FAR':
+        retval = FAR(Version, Endian, REC)
+    elif REC_ID == 'ATR':
+        retval = ATR(Version, Endian, REC)
+    elif REC_ID == 'VUR':
+        retval = VUR(Version, Endian, REC)
+    elif REC_ID == 'MIR':
+        retval = MIR(Version, Endian, REC)
+    elif REC_ID == 'MRR':
+        retval = MRR(Version, Endian, REC)
+    elif REC_ID == 'WCR':
+        retval = WCR(Version, Endian, REC)
+    elif REC_ID == 'WIR':
+        retval = WIR(Version, Endian, REC)
+    elif REC_ID == 'WRR':
+        retval = WRR(Version, Endian, REC)
+    elif REC_ID == 'ADR':
+        retval = ADR(Version, Endian, REC)
+    elif REC_ID == 'ASR':
+        retval = ASR(Version, Endian, REC)
+    elif REC_ID == 'BPS':
+        retval = BPS(Version, Endian, REC)
+    elif REC_ID == 'BRR':
+        retval = BRR(Version, Endian, REC)
+    elif REC_ID == 'BSR':
+        retval = BSR(Version, Endian, REC)
+    elif REC_ID == 'CNR':
+        retval = CNR(Version, Endian, REC)
+    elif REC_ID == 'DTR':
+        retval = DTR(Version, Endian, REC)
+    elif REC_ID == 'EPDR':
+        retval = EPDR(Version, Endian, REC)
+    elif REC_ID == 'EPS':
+        retval = EPS(Version, Endian, REC)
+    elif REC_ID == 'ETSR':
+        retval = ETSR(Version, Endian, REC)
+    elif REC_ID == 'FDR':
+        retval = FDR(Version, Endian, REC)
+    elif REC_ID == 'FSR':
+        retval = FSR(Version, Endian, REC)
+    elif REC_ID == 'GDR':
+        retval = GDR(Version, Endian, REC)
+    elif REC_ID == 'GTR':
+        retval = GTR(Version, Endian, REC)
+    elif REC_ID == 'HBR':
+        retval = HBR(Version, Endian, REC)
+    elif REC_ID == 'IDR':
+        retval = IDR(Version, Endian, REC)
+    elif REC_ID == 'MCR':
+        retval = MCR(Version, Endian, REC)
+    elif REC_ID == 'MMR':
+        retval = MMR(Version, Endian, REC)
+    elif REC_ID == 'MSR':
+        retval = MSR(Version, Endian, REC)
+    elif REC_ID == 'NMR':
+        retval = NMR(Version, Endian, REC)
+    elif REC_ID == 'PCR':
+        retval = PCR(Version, Endian, REC)
+    elif REC_ID == 'PDR':
+        retval = PDR(Version, Endian, REC)
+    elif REC_ID == 'PGR':
+        retval = PGR(Version, Endian, REC)
+    elif REC_ID == 'PLR':
+        retval = PLR(Version, Endian, REC)
+    elif REC_ID == 'PMR':
+        retval = PMR(Version, Endian, REC)
+    elif REC_ID == 'PSR':
+        retval = PSR(Version, Endian, REC)
+    elif REC_ID == 'RDR':
+        retval = RDR(Version, Endian, REC)
+    elif REC_ID == 'SBR':
+        retval = SBR(Version, Endian, REC)
+    elif REC_ID == 'SCR':
+        retval = SCR(Version, Endian, REC)
+    elif REC_ID == 'SDR':
+        retval = SDR(Version, Endian, REC)
+    elif REC_ID == 'SHB':
+        retval = SHB(Version, Endian, REC)
+    elif REC_ID == 'SSB':
+        retval = SSB(Version, Endian, REC)
+    elif REC_ID == 'SSR':
+        retval = SSR(Version, Endian, REC)
+    elif REC_ID == 'STS':
+        retval = STS(Version, Endian, REC)
+    elif REC_ID == 'TSR':
+        retval = TSR(Version, Endian, REC)
+    elif REC_ID == 'WTR':
+        retval = WTR(Version, Endian, REC)
+    elif REC_ID == 'RR1':
+        # can not be reached because of -1
+        retval = RR1(Version, Endian, REC)
+    elif REC_ID == 'RR2':
+        # can not be reached because of -1
+        retval = RR2(Version, Endian, REC)
     return retval
 
 
+def dict_to_rec(rec_dict, Endian):
+    '''
+    Creates a STDF record based on prevoiusly exported dictionary from STDF record
+    Input : dictionary with STDF records in format field_name : field_value
+
+    Returns
+    -------
+    STDF record object.
+
+    '''
+    Version = 'V4'
+    if Endian not in ['<', '>']:
+        raise STDFError("Unsupported Endian : '%s'" % Endian)
+
+    rec_id = rec_dict["rec_id"]
+    record = create_record(Version, Endian, rec_id, None)
+
+    for k, v in rec_dict.items():
+        if v != None and k != 'rec_id':
+            record.set_value(k,v)
+    record._update_rec_len()
+    return record
+        
 
 if __name__ == '__main__':
     FileName = r'C:/Users/hoeren/Desktop/TDK/resources/stdf/Advantest93K.std'
