@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class FAR(STDR):
@@ -30,6 +29,6 @@ Location:
                 'STDF_VER' : {'#' :  4, 'Type' : 'U*1', 'Ref' : None, 'Value' : None, 'Text' : 'STDF version number                   ', 'Missing' : int(self.version[1])}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 

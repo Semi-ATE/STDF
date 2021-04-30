@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class WCR(STDR):
@@ -39,12 +38,11 @@ Location:
                 'POS_Y'    : {'#' : 11, 'Type' : 'C*1', 'Ref' : None, 'Value' : None, 'Text' : 'Positive Y direction of wafer (U/D)   ', 'Missing' : ' '   }
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
     def to_atdf(self):
 
-        sequence = {}
         header = ''
         body = ''
         

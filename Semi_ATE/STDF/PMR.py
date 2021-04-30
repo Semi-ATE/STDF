@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class PMR(STDR):
@@ -37,5 +36,5 @@ Location:
                 'SITE_NUM' : {'#' : 9, 'Type' :  'U*1', 'Ref' : None, 'Value' : None, 'Text' : 'Site number associated with channel   ', 'Missing' :    1}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

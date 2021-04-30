@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class SDR(STDR):
@@ -48,5 +47,5 @@ Location:
                 'EXTR_ID'  : {'#' : 22, 'Type' : 'C*n',  'Ref' : None,       'Value' : None, 'Text' : 'Extra equipment ID                    ', 'Missing' : ''  }
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

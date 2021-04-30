@@ -32,5 +32,5 @@ Location:
                 'TEXT_DAT' : {'#' : 3, 'Type' : 'C*n', 'Ref' : None, 'Value' : None, 'Text' : 'Message                               ', 'Missing' :   ''}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

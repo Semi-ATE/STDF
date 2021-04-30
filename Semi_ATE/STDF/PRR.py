@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 
@@ -46,12 +45,11 @@ Location:
             }
 
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
     def to_atdf(self):
 
-        sequence = {}
         header = ''
         body = ''
         
@@ -104,7 +102,7 @@ Location:
                 body += 'F|'
 #           bit 4: 1 = Device completed testing with no pass/fail indication (i.e., bit 3 is invalid)
         elif v != None and v[4] == '1':
-            buff += ' |'
+            body += ' |'
 #                              7 HARD_BIN
         body += self.gen_atdf(7)
 #                              8 SOFT_BIN
@@ -118,7 +116,7 @@ Location:
         v = self.get_fields(5)[3] 
 
         if v != None and v[0] == '1' and v[1] == '1':
-            raise STDFError("export to atdf error: PRR PART_FLG bits 0 and 1 are both set, which is not allowed" )
+            raise STDR.STDFError("export to atdf error: PRR PART_FLG bits 0 and 1 are both set, which is not allowed" )
         elif v != None and v[0] == '1':
             body += "I|"
         elif v != None and v[1] == '1':
