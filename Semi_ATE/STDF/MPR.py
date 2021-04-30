@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class MPR(STDR):
@@ -58,12 +57,11 @@ Location:
                 'HI_SPEC'  : {'#' : 29, 'Type' : 'R*4',  'Ref' :       None, 'Value' : None, 'Text' : 'High specification limit value        ', 'Missing' :                                      0.0}  # OPT_FLAG bit 3 = 1
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
     def to_atdf(self):
 
-        sequence = {}
         header = ''
         body = ''
         

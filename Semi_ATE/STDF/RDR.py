@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class RDR(STDR):
@@ -31,5 +30,5 @@ Location:
                 'RTST_BIN' : {'#' : 4, 'Type' : 'xU*2', 'Ref' : 'NUM_BINS', 'Value' : None, 'Text' : 'Array of retest bin numbers           ', 'Missing' : []  }
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

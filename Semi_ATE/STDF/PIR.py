@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class PIR(STDR):
@@ -33,5 +32,5 @@ Location:
             }
 
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

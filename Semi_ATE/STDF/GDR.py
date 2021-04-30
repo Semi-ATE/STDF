@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class GDR(STDR):
@@ -32,12 +31,11 @@ Location:
                 'GEN_DATA' : {'#' : 4, 'Type' : 'xV*n', 'Ref' : 'FLD_CNT', 'Value' : None, 'Text' : 'Data type code and data for one field ', 'Missing' :   []}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
     def to_atdf(self):
 
-        sequence = {}
         header = ''
         body = ''
         

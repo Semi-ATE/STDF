@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class PCR(STDR):
@@ -37,6 +36,6 @@ Location:
                 'FUNC_CNT' : {'#' : 9, 'Type' : 'U*4', 'Ref' : None, 'Value' : None, 'Text' : 'Number of functional parts tested     ', 'Missing' : 4294967295}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 

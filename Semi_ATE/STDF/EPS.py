@@ -27,5 +27,5 @@ Location:
                 'REC_SUB'  : {'#' :  2, 'Type' :  'U*1', 'Ref' :         None, 'Value' :     20, 'Text' : 'Record sub-type                       ', 'Missing' : '10                     '}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

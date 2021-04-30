@@ -1,4 +1,3 @@
-import sys
 from . import STDR
 
 class PGR(STDR):
@@ -32,5 +31,5 @@ Location:
                 'PMR_INDX' : {'#' : 6, 'Type' : 'xU*2', 'Ref' : 'INDX_CNT', 'Value' : None, 'Text' : 'Array of indexes for pins in the group', 'Missing' :   []}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)

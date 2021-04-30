@@ -1,4 +1,3 @@
-import sys
 import os
 import time
 
@@ -39,12 +38,11 @@ Location:
             }
 
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
     def to_atdf(self):
 
-        sequence = {}
         header = ''
         body = ''
         

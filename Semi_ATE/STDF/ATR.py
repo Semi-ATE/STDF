@@ -35,5 +35,5 @@ Location:
                 'CMD_LINE' : {'#' :  4, 'Type' : 'C*n' , 'Ref' : None, 'Value' :   None, 'Text' : 'Command line of program               ', 'Missing' :   '', 'Note' : ''}
             }
         else:
-            raise STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
+            raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
