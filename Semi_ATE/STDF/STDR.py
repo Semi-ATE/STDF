@@ -322,7 +322,7 @@ class STDR(ABC):
         _, _, Ref, Value, _, Missing = self.get_fields(FieldID)
         # TODO: ref value handling is missing here: for arrays (kxTYPE etc.) this returns the size of the array instead of its value for now
         if Ref is not None:
-            return self.get_value(ref)
+            return self.get_value(Ref)
         return Missing if Value is None else Value
 
     def set_value(self, FieldID, Value):
@@ -1971,7 +1971,6 @@ class STDR(ABC):
             if sequence[field] in time_fields:
                 time_value = self.fields[sequence[field]]['Value']
                 if time_value != None:
-                    local_unix_time_stamp = float(time_value)
                     retval += " = %s" % _stdf_time_field_value_to_string(float(time_value))
             retval += "\n"
         return retval
@@ -1980,13 +1979,14 @@ class STDR(ABC):
         '''
         Method used by convert the record to dict
         '''
-        time_fields = ['MOD_TIM', 'SETUP_T', 'START_T', 'FINISH_T']
         sequence = {}
         for field in self.fields:
-            sequence[self.fields[field]['#']] = field
-        return {sequence[field]: self.fields[sequence[field]]['Value']
-                for field in sequence}
-
+            k = field
+            v = self.fields[field]['Value']
+            sequence[k] = v
+        sequence['rec_id'] = self.id
+        return sequence 
+    
     def gen_atdf(self, fieldID):
         
         field = ''

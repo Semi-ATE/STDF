@@ -56,9 +56,9 @@ def test_records_from_file():
 
     t1 = ""
     if os.name == "nt":
-        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_t))
+        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_t))
     else:
-        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_t))
+        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_t))
     t1 = t1.upper()
 
     data += record.__repr__()
@@ -173,3 +173,34 @@ def test_records_from_file():
 
     os.remove(z.name)
     os.remove(zo.name)
+
+def test_dict_to_rec():
+    
+    record = STDF.WIR()
+
+    rec_len = 0;
+
+    head_num = 1
+    record.set_value('HEAD_NUM', head_num)
+    rec_len += 1;
+
+    site_grp = 1
+    record.set_value('SITE_GRP', site_grp)
+    rec_len += 1;
+
+    start_t = 1609462861 
+    record.set_value('START_T', start_t)
+    rec_len += 4;
+    
+    waf_id = 'NAS12345' 
+    record.set_value('WAFER_ID', waf_id)
+    rec_len += 9;
+    
+    rec_dict = record.to_dict();
+    rec = STDF.utils.dict_to_rec(rec_dict, '<')
+    
+    assert rec.get_value('REC_LEN') == rec_len
+    assert rec.get_value('HEAD_NUM') == head_num
+    assert rec.get_value('SITE_GRP') == site_grp
+    assert rec.get_value('START_T') == start_t
+    assert rec.get_value('WAFER_ID') == waf_id
