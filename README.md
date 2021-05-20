@@ -18,6 +18,7 @@
 
 [![GitHub issues](https://img.shields.io/github/issues/Semi-ATE/Semi-ATE-STDF)](https://github.com/Semi-ATE/Semi-ATE-STDF/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/Semi-ATE/Semi-ATE-STDF)](https://github.com/Semi-ATE/Semi-ATE-STDF/pulls)
+![Conda downloads](https://img.shields.io/conda/dn/conda-forge/Semi-ATE-STD?color=brightgreen)
 
 
 ### This library is NOT intended to be the fastest in the world!
