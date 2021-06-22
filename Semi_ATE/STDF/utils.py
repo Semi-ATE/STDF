@@ -913,9 +913,7 @@ def create_record(Version, Endian, REC_ID, REC):
         retval = RDR(Version, Endian, REC)
     elif REC_ID == 'SBR':
         retval = SBR(Version, Endian, REC)
-    elif REC_ID == 'SCR':
-        retval = SDR(Version, Endian, REC)
-    elif REC_ID == 'SCR':
+    elif REC_ID == 'SDR':
         retval = SDR(Version, Endian, REC)
     elif REC_ID == 'SSR':
         retval = SSR(Version, Endian, REC)
