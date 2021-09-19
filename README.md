@@ -16,11 +16,6 @@
 [![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)](https://anaconda.org/conda-forge/semi-ate-stdf)
 [![conda-forge feedstock](https://img.shields.io/github/issues-pr/conda-forge/Semi-ATE-STDF-feedstock?label=feedstock)](https://github.com/conda-forge/Semi-ATE-STDF-feedstock)
 
-
-
-[![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)](https://github.com/conda-forge/semi-ate-stdf-feedstock)
-
-
 [![GitHub issues](https://img.shields.io/github/issues/Semi-ATE/Semi-ATE-STDF)](https://github.com/Semi-ATE/Semi-ATE-STDF/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/Semi-ATE/Semi-ATE-STDF)](https://github.com/Semi-ATE/Semi-ATE-STDF/pulls)
 ![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/semi-ate-stdf.svg?color=brightgreen)
