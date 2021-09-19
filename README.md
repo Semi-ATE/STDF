@@ -14,7 +14,7 @@
 [![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/Semi-ATE/STDF/latest)](https://github.com/Semi-ATE/STDF)
 [![PyPI](https://img.shields.io/pypi/v/Semi-ATE-STDF?color=blue&label=PyPI)](https://pypi.org/project/Semi-ATE-STDF/)
 [![Conda (channel only)](https://img.shields.io/conda/vn/conda-forge/Semi-ATE-STDF?color=blue&label=conda-forge)](https://anaconda.org/conda-forge/semi-ate-stdf)
-[![conda-forge feedstock](https://img.shields.io/github/issues-pr/conda-forge/Semi-ATE-STDF-feedstock?label=feedstock)](https://github.com/conda-forge/Semi-ATE--STDF-feedstock)
+[![conda-forge feedstock](https://img.shields.io/github/issues-pr/conda-forge/Semi-ATE-STDF-feedstock?label=feedstock)](https://github.com/conda-forge/Semi-ATE-STDF-feedstock)
 
 
 
