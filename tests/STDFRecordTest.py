@@ -1,6 +1,7 @@
 import pytest
 import struct
 import math
+from Semi_ATE.STDF import STDR
 
 class STDFRecordTest:
 
@@ -14,6 +15,8 @@ class STDFRecordTest:
             self.byteorder = 'big'
         elif (endian == '<'):
             self.byteorder = 'little'
+
+        STDR.float_prec_digits = 9
 
     def assert_bits(self, expected_value):
         
