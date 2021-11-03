@@ -198,6 +198,8 @@ class STDR(ABC):
     This is the Abstract Base Class Record for all STDF records
     '''
     buffer = b''
+    # Number of digits when converting from binary float
+    float_prec_digits = -1
 
     def __init__(self, endian=None, record=None):
         self.id = 'STDR'
@@ -1507,9 +1509,10 @@ class STDR(ABC):
                                 v = struct.unpack(fmt, working_buffer)[0]
                                 
                                 if code == 7:
-                                    leading = round(v,0)
-                                    len_lead = len(str(leading))
-                                    v = round(v, 9 - len_lead)
+                                    if STDR.float_prec_digits != -1:
+                                        leading = round(v,0)
+                                        len_lead = len(str(leading))
+                                        v = round(v, STDR.float_prec_digits - len_lead)
 
                                 sv = [ (code, v) ]
                                 self.set_value(FieldKey, sv)
@@ -1612,9 +1615,10 @@ class STDR(ABC):
                     else:
                         raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
                     if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
-                    leading = round(result,0)
-                    len_lead = len(str(leading))
-                    result = round(result, 9 - len_lead)
+                    if STDR.float_prec_digits != -1:
+                        leading = round(result,0)
+                        len_lead = len(str(leading))
+                        result = round(result, STDR.float_prec_digits - len_lead)
                     self.set_value(FieldID, result)
 
                 elif Type == 'C': # string
