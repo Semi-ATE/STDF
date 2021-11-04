@@ -26,6 +26,13 @@ from .TSR import TSR
 from .WCR import WCR
 from .WIR import WIR
 from .WRR import WRR
+from .CDR import CDR
+from .CNR import CNR
+from .PSR import PSR
+from .NMR import NMR
+from .SSR import SSR
+from .STR import STR
+from .VUR import VUR
 from .STDR import STDFError
 from .utils import records_from_file
 
