@@ -120,7 +120,6 @@ def is_file_with_stdf_magicnumber(filename):
 def _stdf_time_field_value_to_string(seconds_since_1970_in_local_time: int):
     return datetime.datetime.fromtimestamp(seconds_since_1970_in_local_time).strftime('%Y-%m-%d %H:%M:%S')
 
-
 def ts_to_id(Version=__latest_STDF_version__, Extensions=None):
     '''
     This function returns a dictionary of TS -> ID for the given STDF version and Extension(s)
@@ -2009,7 +2008,7 @@ class STDR(ABC):
         '''
         
         
-    def to_atdf(self):
+    def to_atdf(self, time_with_leading_zero=False):
 
         sequence = {}
         header = ''
@@ -2024,81 +2023,86 @@ class STDR(ABC):
         else:            
             skip_fields = ['INDX_CNT', 'SITE_CNT']
             
-        if self.id == 'FAR':
-            body = 'A|4|2|U'
-        else:
-            sequence = {}
-            for field in self.fields:
-                sequence[self.fields[field]['#']] = field
-            for field in sorted(sequence)[3:]:
+        sequence = {}
+        for field in self.fields:
+            sequence[self.fields[field]['#']] = field
+        for field in sorted(sequence)[3:]:
 #                Skip the first 3 fields : REC_LEN, REC_TYPE, REC_SUB.
 #                They are not applicable for the ASCII based ATDF file format
-                if sequence[field] in time_fields:
+            if sequence[field] in time_fields:
+                
+                timestamp = self.fields[sequence[field]]['Value']
+                if timestamp == None:
+                    body += '|'
+                else:
+                    t = self.get_str_time_stamp(timestamp, time_with_leading_zero)
+                    body += '%s|' % (t.upper())
                     
-                    timestamp = self.fields[sequence[field]]['Value']
-                    if timestamp == None:
-                        body += '|'
-                    else:
-    #                    ATDF spec page 9:
-    #                    Insignificant leading zeroes in all numbers are optional.
-                        t = ""
-                        if os.name == "nt":
-                            t = time.strftime(
-                                "%#H:%#M:%#S %#d-%b-%Y", time.gmtime(timestamp)
-                            )
-                        else:
-                            t = time.strftime(
-                                "%-H:%-M:%-S %-d-%b-%Y", time.gmtime(timestamp)
-                            )
-                        body += '%s|' % (t.upper())
-                        
-                elif sequence[field] in skip_fields:
+            elif sequence[field] in skip_fields:
 #                    Some fields must be skipped like number of elements in array:
 #                    like INDX_CNT in PGR reconrd
-                    pass
+                pass
+            else:
+                
+                value = self.fields[sequence[field]]['Value']
+                
+                if value == None:
+                    body += '|'
                 else:
-                    
-                    value = self.fields[sequence[field]]['Value']
-                    
-                    if value == None:
-                        body += '|'
-                    else:
-                        if type(value) == list:
-                            
-                            Type = self.fields[sequence[field]]['Type']
-                            Type, Bytes = Type.split("*")
-                            if Type == 'B':
-                                # converting bits into HEX values
-                                vals = []
-                                val = 0
-                                bit = 7
-                                for i in range(len(value)):
-                                    el = value[i]
-                                    val = val | ( int(el)<<bit)
-                                    bit -= 1
-                                    if i != 0 and i % 7 == 0:
-                                        vals.append(val)
-                                        bit = 7
-                                for elem in vals:
-                                    body += hex(elem)
-                                body += '|'
-                            else:
-                                # For the following fields which in some recoreds are
-                                # single value and for some are lists :
-                                # PMR_INDX from PMR as value, but list in PGR
-                                for elem in value:
-                                    body += "%s," % elem
-                                body = body[:-1] 
-                                body += "|"
+                    if type(value) == list:
+                        
+                        Type = self.fields[sequence[field]]['Type']
+                        Type, Bytes = Type.split("*")
+                        if Type == 'B':
+                            # converting bits into HEX values
+                            vals = []
+                            val = 0
+                            bit = 7
+                            for i in range(len(value)):
+                                el = value[i]
+                                val = val | ( int(el)<<bit)
+                                bit -= 1
+                                if i != 0 and i % 7 == 0:
+                                    vals.append(val)
+                                    bit = 7
+                            for elem in vals:
+                                body += hex(elem)
+                            body += '|'
                         else:
-                            body += '%s|' % (value)
-            body = body[:-1] 
+                            # For the following fields which in some recoreds are
+                            # single value and for some are lists :
+                            # PMR_INDX from PMR as value, but list in PGR
+                            for elem in value:
+                                body += "%s," % elem
+                            body = body[:-1] 
+                            body += "|"
+                    else:
+                        body += '%s|' % (value)
+        body = body[:-1] 
 
         # assemble the record
         retval = header + body
 
         if self.local_debug: print("%s._to_atdf()\n   '%s'\n" % (self.id, retval))
         return retval
+
+    def get_str_time_stamp(self, timestamp, time_with_leading_zero=False):
+    #   ATDF spec page 9:
+    #   Insignificant leading zeroes in all numbers are optional.
+        t = ""
+        fmt = ''
+        if time_with_leading_zero:
+            if os.name == "nt":
+                fmt = "%H:%M:%S %d-%b-%Y"
+            else:
+                fmt = "%H:%M:%S %d-%b-%Y"
+        else:
+            if os.name == "nt":
+                fmt = "%#H:%#M:%#S %#d-%b-%Y"
+            else:
+                fmt = "%-H:%-M:%-S %-d-%b-%Y"
+        t = time.strftime(fmt, time.gmtime(timestamp))
+        return t.upper()
 
     def reset(self):
         '''

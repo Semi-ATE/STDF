@@ -27,192 +27,194 @@ def mir(endian):
     setup_t = 1609462861 
     record.set_value('SETUP_T', setup_t)
     rec_len += 4;
-    expected_atdf += "1:1:1 1-JAN-2021|"
     
     start_t = 1609462961
     record.set_value('START_T', start_t)
     rec_len += 4;
-    expected_atdf += "1:2:41 1-JAN-2021|"
-    
     
     stat_num = 131
     record.set_value('STAT_NUM', stat_num)
     rec_len += 1;
-    expected_atdf += "131|"
     
     mode_cod = 'P'
     record.set_value('MODE_COD', mode_cod)
     rec_len += 1;
-    expected_atdf += mode_cod + "|"
     
     rtst_cod = ' '
     record.set_value('RTST_COD', ' ')
     rec_len += 1;
-    expected_atdf += rtst_cod+"|"
     
     prot_cod = ' '
     record.set_value('PROT_COD', ' ')
     rec_len += 1;
-    expected_atdf += prot_cod + "|"
     
     burn_tim = 65535
     record.set_value('BURN_TIM', burn_tim)
     rec_len += 2;
-    expected_atdf += "65535|"
     
     cmod_cod = ' '
     record.set_value('CMOD_COD', cmod_cod)
     rec_len += 1;
-    expected_atdf += cmod_cod + "|"
     
     lot_id = 'NAS9999'
     record.set_value('LOT_ID', lot_id)
     rec_len += len(lot_id) + 1;
-    expected_atdf += lot_id + "|"
     
     part_typ = 'HAL3715'
     record.set_value('PART_TYP', part_typ)
     rec_len += len(part_typ) + 1;
-    expected_atdf += part_typ + "|"
     
     node_nam = 'Node123'
     record.set_value('NODE_NAM', node_nam)
     rec_len += len(node_nam) + 1;
-    expected_atdf += node_nam + "|"
     
     tstr_typ = 'SCT'
     record.set_value('TSTR_TYP', tstr_typ)
     rec_len += len(tstr_typ) + 1;
-    expected_atdf += tstr_typ + "|"
     
     job_nam = 'TPHAL3715_HCT'
     record.set_value('JOB_NAM', job_nam)
     rec_len += len(job_nam) + 1;
-    expected_atdf += job_nam + "|"
-    
+
     job_rev = '4HEX2GIT'
     record.set_value('JOB_REV', job_rev)
     rec_len += len(job_rev) + 1;
-    expected_atdf += job_rev + "|"
     
     sblot_id = 'NAS9999-1'
     record.set_value('SBLOT_ID', sblot_id)
     rec_len += len(sblot_id) + 1;
-    expected_atdf += sblot_id + "|"
     
     oper_nam = 'op123'
     record.set_value('OPER_NAM',oper_nam)
     rec_len += len(oper_nam) + 1;
-    expected_atdf += oper_nam + "|"
     
     exec_typ = 'SCTSW'
     record.set_value('EXEC_TYP', exec_typ)
     rec_len += len(exec_typ) + 1;
-    expected_atdf += exec_typ + "|"
     
     exec_ver = 'GIT4HEXREV'
     record.set_value('EXEC_VER', exec_ver)
     rec_len += len(exec_ver) + 1;
-    expected_atdf += exec_ver + "|"
     
     test_cod = 'PROBING'
     record.set_value('TEST_COD', test_cod)
     rec_len += len(test_cod) + 1;
-    expected_atdf += test_cod + "|"
     
     tst_temp = '25C'
     record.set_value('TST_TEMP', tst_temp)
     rec_len += len(tst_temp) + 1;
-    expected_atdf += tst_temp + "|"
     
     user_txt = ''
     record.set_value('USER_TXT', user_txt)
     rec_len += len(user_txt) + 1;
-    expected_atdf += user_txt + "|"
     
     aux_file = ''
     record.set_value('AUX_FILE', aux_file)
     rec_len += 1;
-    expected_atdf += aux_file + "|"
     
     pkg_typ = 'SOIC8'
     record.set_value('PKG_TYP', pkg_typ)
     rec_len += len(pkg_typ) + 1;
-    expected_atdf += pkg_typ + "|"
     
     family_id = 'HAL'
     record.set_value('FAMLY_ID', family_id)
     rec_len += len(family_id) + 1;
-    expected_atdf += family_id + "|"
     
     date_cod = '1220'
     record.set_value('DATE_COD', date_cod)
     rec_len += len(date_cod) + 1;
-    expected_atdf += date_cod + "|"
     
     facil_id = 'FR1'
     record.set_value('FACIL_ID', facil_id)
     rec_len += len(facil_id) + 1;
-    expected_atdf += facil_id + "|"
     
     floor_id = 'PR1'
     record.set_value('FLOOR_ID', floor_id)
     rec_len += len(floor_id) + 1;
-    expected_atdf += floor_id + "|"
     
     proc_id = 'FIN135nm'
     record.set_value('PROC_ID', proc_id)
     rec_len += len(proc_id) + 1;
-    expected_atdf += proc_id + "|"
     
     oper_frq = '1'
     record.set_value('OPER_FRQ', oper_frq)
     rec_len += len(oper_frq) + 1;
-    expected_atdf += oper_frq + "|"
     
     spec_nam = 'PR35'
     record.set_value('SPEC_NAM', spec_nam)
     rec_len += len(spec_nam) + 1;
-    expected_atdf += spec_nam + "|"
     
     spec_ver = '1.1'
     record.set_value('SPEC_VER', spec_ver)
     rec_len += len(spec_ver) + 1;
-    expected_atdf += spec_ver + "|"
     
     flow_id = 'STD'
     record.set_value('FLOW_ID', flow_id)
     rec_len += len(flow_id) + 1;
-    expected_atdf += flow_id + "|"
     
     setup_id = 'LB1111'
     record.set_value('SETUP_ID', setup_id)
     rec_len += len(setup_id) + 1;
-    expected_atdf += setup_id + "|"
 
     dsgn_rev = 'AB12CH'
     record.set_value('DSGN_REV', dsgn_rev)
     rec_len += len(dsgn_rev) + 1;
-    expected_atdf += dsgn_rev + "|"
     
     eng_id = ''
     record.set_value('ENG_ID', eng_id)
     rec_len += 1;
-    expected_atdf += eng_id + "|"
     
     rom_cod = 'RC12345'
     record.set_value('ROM_COD', rom_cod)
     rec_len += len(rom_cod) + 1;
-    expected_atdf += rom_cod + "|"
     
     serl_num = '1221001'
     record.set_value('SERL_NUM', serl_num)
     rec_len += len(serl_num) + 1;
-    expected_atdf += serl_num + "|"
     
     supr_name = ''
     record.set_value('SUPR_NAM', supr_name)
     rec_len += 1;
+
+    expected_atdf += lot_id + "|"
+    expected_atdf += part_typ + "|"
+    expected_atdf += job_nam + "|"
+    expected_atdf += node_nam + "|"
+    expected_atdf += tstr_typ + "|"
+    #SETUP_T
+    expected_atdf += "1:1:1 1-JAN-2021|"
+    #START_T
+    expected_atdf += "1:2:41 1-JAN-2021|"
+    expected_atdf += oper_nam + "|"
+    expected_atdf += mode_cod + "|"
+    expected_atdf += f"{stat_num}|"
+    expected_atdf += sblot_id + "|"
+    expected_atdf += test_cod + "|"
+    expected_atdf += rtst_cod+"|"
+    expected_atdf += job_rev + "|"
+    expected_atdf += exec_typ + "|"
+    expected_atdf += exec_ver + "|"
+    expected_atdf += prot_cod + "|"
+    expected_atdf += cmod_cod + "|"
+    expected_atdf += f"{burn_tim}|"
+    expected_atdf += tst_temp + "|"
+    expected_atdf += user_txt + "|"
+    expected_atdf += aux_file + "|"
+    expected_atdf += pkg_typ + "|"
+    expected_atdf += family_id + "|"
+    expected_atdf += date_cod + "|"
+    expected_atdf += facil_id + "|"
+    expected_atdf += floor_id + "|"
+    expected_atdf += proc_id + "|"
+    expected_atdf += oper_frq + "|"
+    expected_atdf += spec_nam + "|"
+    expected_atdf += spec_ver + "|"
+    expected_atdf += flow_id + "|"
+    expected_atdf += setup_id + "|"
+    expected_atdf += dsgn_rev + "|"
+    expected_atdf += eng_id + "|"
+    expected_atdf += rom_cod + "|"
+    expected_atdf += serl_num + "|"
     expected_atdf += supr_name
 
 #    Test serialization
@@ -419,7 +421,6 @@ def mir(endian):
     
 #   Test ATDF output
     assert inst.to_atdf() == expected_atdf
-
 #   Test printing when the record is empty
     empty = MIR('V4', endian)
     print(empty)

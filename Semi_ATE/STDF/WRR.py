@@ -51,7 +51,7 @@ Location:
             raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
-    def to_atdf(self):
+    def to_atdf(self, time_with_leading_zero=False):
 
         header = ''
         body = ''
@@ -85,11 +85,7 @@ Location:
 #       5 FINISH_T
         v = self.get_fields(5)[3]
         if v != None:
-            t = ""
-            if os.name == "nt":
-                t = time.strftime("%#H:%#M:%#S %#d-%b-%Y", time.gmtime(v))
-            else:
-                t = time.strftime("%-H:%-M:%-S %-d-%b-%Y", time.gmtime(v))
+            t = self.get_str_time_stamp(v, time_with_leading_zero)
             body += "%s|" % (t.upper())
 
 #       6 PART_CNT

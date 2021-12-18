@@ -32,3 +32,17 @@ Location:
             raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
         self._default_init(endian, record)
 
+    def to_atdf(self, unscaled = True):
+
+        header = self.id + ':'
+
+        body = ''
+        if unscaled:
+            body = 'A|4|2|U'
+        else:
+            body = 'A|4|2|S'
+
+        # assemble the record
+        retval = header + body
+
+        return retval
