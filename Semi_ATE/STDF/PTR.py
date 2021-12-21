@@ -128,31 +128,28 @@ Location:
 #            1 = Test completed with no pass/fail indication
 
         v = self.get_fields(6)[3] 
-        if v != None and v[6] == '1':
-            buff += ' '
-        elif v != None and v[6] == '0':
-            test_status = 'Unknown'
-#            TEST_FLG
-#            bit 7:
-#                0 = Test passed
-#                1 = Test failed
-
-            if v[7] == '0':
-                buff += 'P'
-                test_status = 'P'
-            elif v[7] == '1':
-                buff += 'F'
-                test_status = 'F'
-
-#       7    PARM_FLG
-#            bit 5:
+        if v != None:
+            if v[6] == '1':
+                buff += ' '
+            elif v[6] == '0':
+                test_status = 'Unknown'
+#               TEST_FLG
+#               bit 7:
+#                   0 = Test passed (ignore value, go to PARM_FLG bit 5)
+#                   1 = Test failed
+                if v[7] == '1':
+                    buff += 'F'
+                else:
+#                PARM_FLG
+#                bit 5:
 #                0 = Test failed or test passed standard limits
 #                1 = Test passed alternate limits
-            v = self.get_fields(7)[3] 
-            if v != None and v[5] == '0':
-                buff += test_status
-            elif v != None and [5] == '1':
-                buff += 'A'
+                    v = self.get_fields(7)[3] 
+                    if v != None:
+                        if v[5] == '0':
+                            buff += 'P'
+                        elif v[5] == '1':
+                            buff += 'A'
         body += "%s|" % buff
 #        Alarm Flags:
 #            TEST_FLG bits 0, 2, 3, 4 & 5
