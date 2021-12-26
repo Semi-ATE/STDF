@@ -24,6 +24,10 @@ setup(
     keywords="Semiconductor ATE Automatic Test Equipment STDF",
     platforms=["Windows", "Linux", "Mac OS-X"],
     packages=find_packages(),
+    install_requires=[
+        'pyqt',
+        'xlsxwriter'
+    ],
     include_package_data=True,
     classifiers=[
         'License :: OSI Approved :: MIT License',
