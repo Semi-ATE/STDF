@@ -135,10 +135,11 @@ def ptr(endian):
     record.set_value('HI_LIMIT', hi_limit)
     rec_len += 4;
 
-    units = 'mV'
-    record.set_value('UNITS', units)
-    rec_len += len(units) + 1;
-    expected_atdf += str(units) + "|"
+    unicode_units = '°C'
+    ascii_units = 'C'
+    record.set_value('UNITS', unicode_units)
+    rec_len += len(ascii_units) + 1;
+    expected_atdf += str(ascii_units) + "|"
 
     expected_atdf += str(lo_limit) + "|"
     expected_atdf += str(hi_limit) + "|"
@@ -215,8 +216,8 @@ def ptr(endian):
 #   Test HI_LIMIT, expected value hi_limit
     stdfRecTest.assert_float(hi_limit)
 #   Test UNITS, expected value units
-    stdfRecTest.assert_ubyte(len(units))
-    stdfRecTest.assert_char_array(len(units), units)
+    stdfRecTest.assert_ubyte(len(ascii_units))
+    stdfRecTest.assert_char_array(len(ascii_units), ascii_units)
 #   Test C_RESFMT, expected value c_resfmt
     stdfRecTest.assert_ubyte(len(c_resfmt))
     stdfRecTest.assert_char_array(len(c_resfmt), c_resfmt)
@@ -267,7 +268,7 @@ def ptr(endian):
 #   Test HI_LIMIT, position 16, value of hi_limit variable
     stdfRecTest.assert_instance_field(inst, 16, hi_limit);
 #   Test UNITS, position 17, value of units variable
-    stdfRecTest.assert_instance_field(inst, 17, units);
+    stdfRecTest.assert_instance_field(inst, 17, ascii_units);
 #   Test C_RESFMT, position 18, value of c_resfmt variable
     stdfRecTest.assert_instance_field(inst, 18, c_resfmt);
 #   Test C_LLMFMT, position 19, value of c_llmfmt variable
