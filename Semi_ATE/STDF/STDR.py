@@ -598,7 +598,21 @@ class STDR(ABC):
                     # TODO: OK, but why strip first, just to pad again? common value for "C*1" is a single space ' ', but "C*n" is usually not filled with spaces, is it?
                     temp = temp.ljust(int(Bytes), ' ')
                 elif Bytes == 'n':
-                    temp = Value.strip()[:255]
+                    # issue 40 : removing unicode chars from the STDF, because STDF supports only ASCII
+                    # We can not use the extended ASCII (like Latin-1), because in STDF spec is written:
+                    # ASCII : (American Standard Code for Information Interchange) A code, using seven bit plus
+                    # parity, established by the American National Standards Institute (ANSI) to achieve
+                    # compatibility between devices exchanging character oriented data.
+                    # None ASCCI characters will be replaced with empty string
+                    new_value = ''
+                    count = 0
+                    for c in Value:
+                        if ord(c) > 127:
+                            new_value += ' '
+                        else:
+                            new_value += Value[count]
+                        count += 1
+                    temp = new_value.strip()[:255]
                 elif Bytes == 'f':
                     raise STDFError("%s.set_value(%s, %s) : Unimplemented type '%s'" % (self.id, FieldKey, Value, '*'.join((Type, Bytes))))
                 else:
