@@ -11,9 +11,10 @@ jobs:
       - name: Install mamba & environment
         uses: mamba-org/provision-with-micromamba@v10
       - name: Show environment
-        shell: bash -l {0}
+        shell: bash -e {0}
         run: conda list
       - name: Run tests
+        shell: bash -e {0}
         run: |
           pytest tests/ --cov=STDF
       - name: Check package
