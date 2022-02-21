@@ -3,37 +3,37 @@ name: CI
 on: [push]
 
 jobs:
-  test-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Install mamba & environment
-        uses: mamba-org/provision-with-micromamba@v11
-      - name: Show environment
-        shell: bash -l {0}
-        run: |
-          mamba list
-      - name: Run tests
-        shell: bash -l {0}
-        run: |
-          pytest tests/ --cov=STDF
-      - name: Check package
-        shell: bash -l {0}
-        run: |
-          python setup.py sdist
-          twine check dist/*
-      - name: Check manifest 
-        shell: bash -l {0}
-        run: |
-          check-manifest
+#  test-linux:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v2
+#      - name: Install mamba & environment
+#        uses: mamba-org/provision-with-micromamba@v11
+#      - name: Show environment
+#        shell: bash -l {0}
+#        run: |
+#          mamba list
+#      - name: Run tests
+#        shell: bash -l {0}
+#        run: |
+#          pytest tests/ --cov=STDF
+#      - name: Check package
+#        shell: bash -l {0}
+#        run: |
+#          python setup.py sdist
+#          twine check dist/*
+#      - name: Check manifest 
+#        shell: bash -l {0}
+#        run: |
+#          check-manifest
   test-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Install mamba & environment
-        uses: mamba-org/provision-with-micromamba@v11
+        uses: mamba-org/provision-with-micromamba@main
       - name: Show environment
         shell: powershell
         run: |
