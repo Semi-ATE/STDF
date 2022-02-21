@@ -36,14 +36,17 @@ jobs:
         uses: mamba-org/provision-with-micromamba@v10
       - name: Show environment
         shell: bash -l {0}
-        run: conda list
+        run: |
+          mamba list
       - name: Run tests
+        shell: bash -l {0}
         run: |
           pytest tests/ --cov=STDF
-      - name: Check package
+        shell: bash -l {0}
         run: |
           python setup.py sdist
           twine check dist/*
       - name: Check manifest 
+        shell: bash -l {0}
         run: |
           check-manifest
