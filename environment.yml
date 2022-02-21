@@ -1,0 +1,11 @@
+name: test
+channels:
+  - conda-forge
+  - semi-ate
+dependencies:
+  - python=3.8
+  - anaconda-client
+  - conda-build
+  - mamba
+  - pyqt=5.12.3
+  - xlsxwriter
