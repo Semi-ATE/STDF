@@ -9,3 +9,10 @@ dependencies:
   - mamba
   - pyqt=5.12.3
   - xlsxwriter
+  - pytest
+  - pytest-cov
+  - check-manifest
+  - pip 
+  - setuptools 
+  - twine
+  - tree
