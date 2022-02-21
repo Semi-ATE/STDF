@@ -1,3 +1,5 @@
+pyqt
+xlsxwriter
 pytest
 pytest-cov
 check-manifest
