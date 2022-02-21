@@ -26,8 +26,8 @@ jobs:
 #      - name: Check manifest 
 #        shell: bash -l {0}
 #        run: |
-#          check-manifest
-test-windows:
+#          check-manifes
+  test-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
