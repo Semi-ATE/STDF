@@ -42,6 +42,7 @@ jobs:
         shell: bash -l {0}
         run: |
           pytest tests/ --cov=STDF
+      - name: Check package
         shell: bash -l {0}
         run: |
           python setup.py sdist
