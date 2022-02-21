@@ -19,10 +19,12 @@ jobs:
         run: |
           pytest tests/ --cov=STDF
       - name: Check package
+        shell: bash -l {0}
         run: |
           python setup.py sdist
           twine check dist/*
       - name: Check manifest 
+        shell: bash -l {0}
         run: |
           check-manifest
   test-windows:
