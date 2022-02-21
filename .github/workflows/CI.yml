@@ -12,7 +12,9 @@ jobs:
         uses: mamba-org/provision-with-micromamba@v10
       - name: Show environment
         shell: bash -e {0}
-        run: conda list
+        run: |
+          conda activate test
+          conda list
       - name: Run tests
         shell: bash -e {0}
         run: |
