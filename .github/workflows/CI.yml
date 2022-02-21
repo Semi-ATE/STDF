@@ -27,27 +27,32 @@ jobs:
 #        shell: bash -l {0}
 #        run: |
 #          check-manifest
-  test-windows:
+test-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Install mamba & environment
-        uses: mamba-org/provision-with-micromamba@main
-      - name: Show environment
-        shell: powershell
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Setup dependencies
         run: |
-          mamba list
+          pip install -r requirements/test.txt
+      - name: Show environment
+        shell: bash -l {0}
+        run: |
+          pip list
       - name: Run tests
-        shell: powershell
+        shell: bash -l {0}
         run: |
           pytest tests/ --cov=STDF
       - name: Check package
-        shell: powershell
+        shell: bash -l {0}
         run: |
           python setup.py sdist
           twine check dist/*
       - name: Check manifest 
-        shell: powershell
+        shell: bash -l {0}
         run: |
           check-manifest
