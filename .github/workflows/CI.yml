@@ -26,7 +26,7 @@ jobs:
       - name: Check manifest 
         shell: bash -l {0}
         run: |
-          check-manifes
+          check-manifest
   test-windows:
     runs-on: windows-latest
     steps:
