@@ -25,7 +25,8 @@ setup(
     platforms=["Windows", "Linux", "Mac OS-X"],
     packages=find_packages(),
     install_requires=[
-        'pyqt',
+#Issue 44 Disable temporary usage of pyqt to check if conda-forge feedstock will pass 
+#        'pyqt',
         'xlsxwriter'
     ],
     include_package_data=True,

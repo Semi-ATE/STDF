@@ -7,7 +7,8 @@ dependencies:
   - anaconda-client
   - conda-build
   - mamba
-  - pyqt=5.12.3
+#Issue 44 Disable temporary usage of pyqt to check if conda-forge feedstock will pass 
+#  - pyqt=5.12.3
   - xlsxwriter
   - pytest
   - pytest-cov

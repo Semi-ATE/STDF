@@ -11,9 +11,10 @@ import datetime
 import os
 import time
 
-from PyQt5.QtCore import QDate
-from PyQt5.QtCore import QDateTime
-from PyQt5.QtCore import QTime
+#Issue 44 Disable temporary usage of pyqt to check if conda-forge feedstock will pass 
+#from PyQt5.QtCore import QDate
+#from PyQt5.QtCore import QDateTime
+#from PyQt5.QtCore import QTime
 
 
 def is_date(stamp):
@@ -26,7 +27,7 @@ def is_date(stamp):
             if stamp.isdigit():
                 DD = int(stamp[:2])
                 MM = int(stamp[2:4])
-                YYYY = int(stamp[4:])
+#                YYYY = int(stamp[4:])
                 if DD > 31 : return False
                 if MM > 12 : return False
                 return True
@@ -201,13 +202,14 @@ class DT(object):
                 self.epoch =  os.stat(stamp)[6]
             else:
                 raise Exception("can not interprete the string '%s' as an initializer " % stamp)
-        elif isinstance(stamp, QDateTime):
-            self.epoch = stamp.currentSecsSinceEpoch()
-        elif isinstance(stamp, QDate):
-            DD = stamp.dayOfWeek()
-            MM = stamp.month()
-            YYYY = stamp.year()
-            self.epoch = int((datetime.datetime(YYYY, MM, DD) - datetime.datetime(1970,1,1)).total_seconds())
+#Issue 44 Disable temporary usage of pyqt to check if conda-forge feedstock will pass 
+#        elif isinstance(stamp, QDateTime):
+#           self.epoch = stamp.currentSecsSinceEpoch()
+#        elif isinstance(stamp, QDate):
+#            DD = stamp.dayOfWeek()
+#            MM = stamp.month()
+#            YYYY = stamp.year()
+#            self.epoch = int((datetime.datetime(YYYY, MM, DD) - datetime.datetime(1970,1,1)).total_seconds())
         else:
             raise Exception("Don't now how to handle type(%s)=%s" % (stamp, type(stamp)))
         self._populate()
@@ -283,12 +285,13 @@ class DT(object):
         self.datetime = datetime.datetime(self.year, self.month, self.mday, self.hour, self.min, self.sec)
         self.date = datetime.date(self.year, self.month, self.mday)
         self.time = datetime.time(self.hour, self.min, self.sec)
-        utc_offset = (-self.tz*3600)+(self.dst*3600)
-        self.QDateTime = QDateTime()
-        self.QDateTime.setOffsetFromUtc(int(utc_offset)) # timezone + day light saving
-        self.QDateTime.setSecsSinceEpoch(self.epoch)
-        self.QDate = self.QDateTime.date()
-        self.QTime = self.QDateTime.time()
+#Issue 44 Disable temporary usage of pyqt to check if conda-forge feedstock will pass 
+#        utc_offset = (-self.tz*3600)+(self.dst*3600)
+#        self.QDateTime = QDateTime()
+#        self.QDateTime.setOffsetFromUtc(int(utc_offset)) # timezone + day light saving
+#        self.QDateTime.setSecsSinceEpoch(self.epoch)
+#        self.QDate = self.QDateTime.date()
+#        self.QTime = self.QDateTime.time()
 
     def boh(self):
         '''
