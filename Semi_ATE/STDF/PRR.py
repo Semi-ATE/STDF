@@ -84,7 +84,10 @@ Location:
 #       3 HEAD_NUM 
         body += self.gen_atdf(3)
 #       4 SITE_NUM 
-        body += self.gen_atdf(4)
+        site_num = self.gen_atdf(4)
+        if site_num == "|":
+            site_num = "1|"
+        body += site_num
 #       12 PART_ID 
         body += self.gen_atdf(12)
 #       6 NUM_TEST 
