@@ -2060,7 +2060,7 @@ class STDR(ABC):
                 
                 value = self.fields[sequence[field]]['Value']
                 
-                if value == None:
+                if value == None or value == []:
                     body += '|'
                 else:
                     if type(value) == list:
