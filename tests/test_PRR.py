@@ -29,7 +29,7 @@ def prr(endian):
     expected_atdf += str(head_num) +"|"
 
     site_num = 1
-#    record.set_value('SITE_NUM', site_num)
+    record.set_value('SITE_NUM', site_num)
     rec_len += 1;
     expected_atdf += str(site_num) + "|"
     
@@ -62,8 +62,6 @@ def prr(endian):
 
     '''
 
-#    part_flg = ['1', '0', '0', '1', '0', '0', '0', '0']
-#    part_flg = ['1', '0', '0', '0', '0', '0', '0', '0']
     part_flg = ['1', '0', '1', '1', '0', '0', '0', '0']
     record.set_value('PART_FLG', part_flg)
     rec_len += 1;
@@ -134,13 +132,6 @@ def prr(endian):
 
     w_data = record.__repr__()
     io_data = io.BytesIO(w_data)
-    
-#    print("================")
-#    print(record)
-#    print("================")
-#    print(record.to_atdf())
-#    print("================")
-
 
     stdfRecTest = STDFRecordTest(io_data, endian)
 #   rec_len, rec_type, rec_sub
