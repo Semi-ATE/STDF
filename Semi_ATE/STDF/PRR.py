@@ -85,8 +85,6 @@ Location:
         body += self.gen_atdf(3)
 #       4 SITE_NUM 
         site_num = self.gen_atdf(4)
-        if site_num == "|":
-            site_num = "1|"
         body += site_num
 #       12 PART_ID 
         body += self.gen_atdf(12)
@@ -103,9 +101,9 @@ Location:
             # 1 = Part failed
             elif self.get_fields(5)[3][3] == '1':
                 body += 'F|'
+        else:
 #           bit 4: 1 = Device completed testing with no pass/fail indication (i.e., bit 3 is invalid)
-        elif v != None and v[4] == '1':
-            body += ' |'
+            body += 'F|'
 #                              7 HARD_BIN
         body += self.gen_atdf(7)
 #                              8 SOFT_BIN
