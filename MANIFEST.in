@@ -2,8 +2,9 @@ include LICENSE
 include CODEOWNERS
 recursive-include Semi_ATE *.md
 recursive-include requirements *.txt
-recursive-exclude tests *.py
 recursive-include Semi_ATE *.py
 recursive-include scripts *.py
+recursive-exclude tests *.py
+recursive-exclude tests *.stdf
 include *.yml
 environment.yml
