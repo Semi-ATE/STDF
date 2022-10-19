@@ -36,4 +36,4 @@ from .VUR import VUR
 from .STDR import STDFError
 from .utils import records_from_file
 
-__version__ = '0.0.0'
+__version__ = '0.2.0'
