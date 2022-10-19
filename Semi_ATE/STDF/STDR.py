@@ -628,7 +628,7 @@ class STDR(ABC):
                             if (Value < 0) or (Value > 255):
                                 raise STDFError("%s.set_value(%s, %s) : '%s' does contain an non-8-bit integer." % (self.id, FieldKey, Value, '*'.join((Type, Bytes))))
                             for Bit in range(8):
-                                mask = pow(2, Bit)
+                                mask = pow(2, 7-Bit)
                                 if (Value & mask) == mask:
                                     temp[Bit] = '1'
                         elif isinstance(Value, list):
@@ -672,7 +672,7 @@ class STDR(ABC):
                             temp_index += 1
                         elif isinstance(Value[value_index], int):
                             for Bit in range(8):
-                                mask = pow(2, Bit)
+                                mask = pow(2, 7-Bit)
                                 if (Value[value_index] & mask) == mask:
                                     temp[temp_index] = '1'
                                 temp_index += 1
@@ -1206,7 +1206,7 @@ class STDR(ABC):
                         byte = 0
                         for Bit in range(8):
                             if ValueMask[i][(Byte * 8) + Bit] == '1':
-                                byte+= pow(2, Bit)
+                                byte+= pow(2, 7-Bit)
                         pkg += struct.pack('B', byte)
             else:
                 if TypeMultiplier: raise STDFError("%s._pack_item(%s) : Unsupported type-format '%s'" % (self.id, FieldKey, str(K) + TypeFormat))
