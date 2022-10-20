@@ -1672,7 +1672,7 @@ class STDR(ABC):
                         result = ['0'] * (int(Bytes) * 8)
                         for Byte in range(len(temp)):
                             for Bit in range(8):
-                                mask = pow(2, 7 - Bit)
+                                mask = pow(2, Bit)
                                 if (temp[Byte] & mask) == mask :
                                     result[(Byte * 8) + Bit] = '1'
                     elif Bytes == 'n': # B*n
