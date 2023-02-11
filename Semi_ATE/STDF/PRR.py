@@ -121,8 +121,8 @@ Location:
             body += "I|"
         elif v != None and v[1] == '1':
             body += "C|"
-#        elif v != None and v[0] == '0' and v[1] == '0':
-#            body += "|"
+        elif v != None and v[0] == '0' and v[1] == '0':
+            body += "|"
 #                              5 PART_FLG bit 2
         if v != None and v[2] == '0':
             body += "|"
