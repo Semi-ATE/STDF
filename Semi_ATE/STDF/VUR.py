@@ -22,10 +22,11 @@ class VUR(STDR):
 #     Just before the MIR
 # '''
              self.fields = {
-                 'REC_LEN'  : {'#' : 0, 'Type' : 'U*2', 'Ref' : None, 'Value' : None, 'Text' : 'Bytes of data following header        ', 'Missing' : None},
-                 'REC_TYP'  : {'#' : 1, 'Type' : 'U*1', 'Ref' : None, 'Value' :    0, 'Text' : 'Record type                           ', 'Missing' : None},
-                 'REC_SUB'  : {'#' : 2, 'Type' : 'U*1', 'Ref' : None, 'Value' :   30, 'Text' : 'Record sub-type                       ', 'Missing' : None},
-                 'UPD_NAM'  : {'#' : 3, 'Type' : 'C*n', 'Ref' : None, 'Value' : None, 'Text' : 'Update Version Name                   ', 'Missing' : ''  }
+                 'REC_LEN'  : {'#' : 0, 'Type' :  'U*2', 'Ref' :      None, 'Value' : None, 'Text' : 'Bytes of data following header        ', 'Missing' : None},
+                 'REC_TYP'  : {'#' : 1, 'Type' :  'U*1', 'Ref' :      None, 'Value' :    0, 'Text' : 'Record type                           ', 'Missing' : None},
+                 'REC_SUB'  : {'#' : 2, 'Type' :  'U*1', 'Ref' :      None, 'Value' :   30, 'Text' : 'Record sub-type                       ', 'Missing' : None},
+                 'UPD_CNT'  : {'#' : 3, 'Type' :  'U*1', 'Ref' :      None, 'Value' : None, 'Text' : 'Count (k) of updates in this record   ', 'Missing' :    0},
+                 'UPD_NAM'  : {'#' : 4, 'Type' : 'xC*n', 'Ref' : 'UPD_CNT', 'Value' : None, 'Text' : 'Update Version Name                   ', 'Missing' :   []}
              }
          else:
              raise STDR.STDFError("%s object creation error: unsupported version '%s'" % (self.id, version))
