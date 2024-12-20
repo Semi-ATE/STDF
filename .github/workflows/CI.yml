@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test-linux:
+  do-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,48 +17,6 @@ jobs:
         uses: mamba-org/setup-micromamba@v2.0.3
         with:
           environment-file: environment.yml
-
-      - name: Run tests
-        shell: bash -l {0}
-        run: |
-          pytest tests/ --cov=STDF
-
-      - name: Check package
-        shell: bash -l {0}
-        run: |
-          python setup.py sdist
-          twine check dist/*
-
-      - name: Check manifest 
-        shell: bash -l {0}
-        run: |
-          check-manifest
-
-  test-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install micromamba & environment
-        uses: mamba-org/setup-micromamba@v2.0.3
-        with:
-          environment-file: environment.yml
-
-
-#      - name: Setup python
-#        uses: actions/setup-python@v2
-#        with:
-#          python-version: '3.8'
-
-#      - name: Setup dependencies
-#        run: |
-#          pip install -r requirements/test.txt
-
-#      - name: Show environment
-#        shell: bash -l {0}
-#        run: |
-#          pip list
 
       - name: Run tests
         shell: bash -l {0}
