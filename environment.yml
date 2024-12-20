@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - semi-ate
 dependencies:
-  - python=3.8
+  - python
   - anaconda-client
   - conda-build
   - mamba
