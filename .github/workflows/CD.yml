@@ -8,30 +8,47 @@ jobs:
   make-release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v1
+    - uses: actions/checkout@v4
+
+    - name: Install micromamba & environment
+      uses: mamba-org/setup-micromamba@v2.0.3
       with:
-        python-version: '3.8'
-    - name: Install dependencies
-      run: |
-          pip install -r requirements/run.txt
-          pip install -r requirements/test.txt
+        environment-file: environment.yml
+
+
+
+
+#    - name: Set up Python
+#      uses: actions/setup-python@v1
+#      with:
+#        python-version: '3.8'
+
+#    - name: Install dependencies
+#      run: |
+#          pip install -r requirements/run.txt
+#          pip install -r requirements/test.txt
+
     - name: tag to version
       run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
+
     - name: Run tests
       run: pytest --cov=Semi_ATE
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
+
     - name: Create package
       run: python setup.py sdist
+
     - name: Check package
       run:  twine check dist/*
+
     - name: Check manifest
       run: check-manifest
+
     - name: Upload to PyPI
       env:
         TWINE_USERNAME: __token__
