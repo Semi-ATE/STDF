@@ -15,7 +15,13 @@ jobs:
       with:
         environment-file: environment.yml
 
+    - name: tag to version
+      run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
 
+    - name: Run tests
+      shell: bash -l {0}
+      run: |
+        pytest tests/ --cov=STDF
 
 
 #    - name: Set up Python
@@ -28,11 +34,9 @@ jobs:
 #          pip install -r requirements/run.txt
 #          pip install -r requirements/test.txt
 
-    - name: tag to version
-      run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
 
-    - name: Run tests
-      run: pytest --cov=Semi_ATE
+#    - name: Run tests
+#      run: pytest --cov=Semi_ATE
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
