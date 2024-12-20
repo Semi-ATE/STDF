@@ -33,3 +33,16 @@ jobs:
         shell: bash -l {0}
         run: |
           check-manifest
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dummy
+        shell: bash -l {0}
+        run: echo "dummy"
+
+  test-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dummy
+        shell: bash -l {0}
+        run: echo "dummy"
