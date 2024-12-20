@@ -16,6 +16,7 @@ jobs:
         environment-file: environment.yml
 
     - name: tag to version
+      shell: bash -l {0}
       run: echo "__version__='${GITHUB_REF#refs/*/}'" >> Semi_ATE/STDF/__init__.py
 
     - name: Run tests
@@ -52,6 +53,7 @@ jobs:
       run:  twine check dist/*
 
     - name: Check manifest
+      shell: bash -l {0}
       run: check-manifest
 
     - name: Upload to PyPI
