@@ -1,4 +1,5 @@
 import io
+import pytest
 
 from .STDFRecordTest import STDFRecordTest
 from Semi_ATE.STDF import PRR
