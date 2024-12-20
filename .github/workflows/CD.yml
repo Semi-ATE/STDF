@@ -38,11 +38,11 @@ jobs:
 #    - name: Run tests
 #      run: pytest --cov=Semi_ATE
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: true
+#    - name: Upload coverage to Codecov
+#      uses: codecov/codecov-action@v1
+#      with:
+#        token: ${{ secrets.CODECOV_TOKEN }}
+#        fail_ci_if_error: true
 
     - name: Create package
       run: python setup.py sdist
