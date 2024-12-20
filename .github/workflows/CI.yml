@@ -40,19 +40,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup python
-        uses: actions/setup-python@v2
+      - name: Install micromamba & environment
+        uses: mamba-org/setup-micromamba@v2.0.3
         with:
-          python-version: '3.8'
+          environment-file: environment.yml
 
-      - name: Setup dependencies
-        run: |
-          pip install -r requirements/test.txt
 
-      - name: Show environment
-        shell: bash -l {0}
-        run: |
-          pip list
+#      - name: Setup python
+#        uses: actions/setup-python@v2
+#        with:
+#          python-version: '3.8'
+
+#      - name: Setup dependencies
+#        run: |
+#          pip install -r requirements/test.txt
+
+#      - name: Show environment
+#        shell: bash -l {0}
+#        run: |
+#          pip list
 
       - name: Run tests
         shell: bash -l {0}
