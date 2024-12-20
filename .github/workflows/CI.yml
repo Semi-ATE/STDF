@@ -18,11 +18,6 @@ jobs:
         with:
           environment-file: environment.yml
 
-#      - name: Show environment
-#        shell: bash -l {0}
-#        run: |
-#          mamba list
-
       - name: Run tests
         shell: bash -l {0}
         run: |
