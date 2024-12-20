@@ -1338,6 +1338,7 @@ class STDR(ABC):
         return pkg
 
     def _unpack_item(self, FieldID):
+        method_name = self._unpack_item.__name__
         if len(self.buffer) == 0:
             self.set_value(FieldID, self.fields[FieldID]['Missing'])
             self.missing_fields += 1
@@ -1348,14 +1349,14 @@ class STDR(ABC):
                     if self.fields[field]['#'] == FieldID:
                         FieldKey = field
                 if FieldKey == '':
-                    raise STDFError("%s._unpack_item(%s) : not a valid integer key" % (self.id, FieldID))
+                    raise STDFError("%s.%s(%s) : not a valid integer key" % (self.id, method_name,FieldID))
             elif isinstance(FieldID, str):
                 if FieldID not in self.fields:
-                    raise STDFError("%s._unpack_item(%s) : not a valid string key" % (self.id, FieldID))
+                    raise STDFError("%s.%s(%s) : not a valid string key" % (self.id, method_name,FieldID))
                 else:
                     FieldKey = FieldID
             else:
-                raise STDFError("%s._unpack_item(%s) : not a string or integer key." % (self.id, FieldID))
+                raise STDFError("%s.%s(%s) : not a string or integer key." % (self.id, method_name,FieldID))
 
             Type, Ref, Value = self.get_fields(FieldKey)[1:4]
             if Ref != None:
@@ -1374,14 +1375,14 @@ class STDR(ABC):
                         elif Bytes == '4': fmt = self.endian + 'I' # list of 4 byte unsigned integers 0..4294967295
                         elif Bytes == '8': fmt = self.endian + 'Q' # list of 8 byte unsigned integers 0..18446744073709551615
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     for _ in range(K):
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result.append(struct.unpack(fmt, working_buffer)[0])
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xI': # list of signed integers
@@ -1391,14 +1392,14 @@ class STDR(ABC):
                         elif Bytes == '4': fmt = self.endian + 'i' # list of 4 byte signed integers
                         elif Bytes == '8': fmt = self.endian + 'q' # list of 8 byte signed integers
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     for _ in range(K):
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result.append(struct.unpack(fmt, working_buffer)[0])
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xR': # list of floating point numbers
@@ -1406,29 +1407,29 @@ class STDR(ABC):
                         if Bytes == '4': fmt = self.endian + 'f'   # list of 4 byte floating point numbers (float)
                         elif Bytes == '8': fmt = self.endian + 'd' # list of 8 byte floating point numbers (double)
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     for _ in range(K):
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result.append(struct.unpack(fmt, working_buffer)[0])
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xC': # list of strings
                     if Bytes.isdigit():
                         if int(Bytes) <= 255:
-                            raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'n':
                         for i in range(K):
                             working_buffer = self.buffer[0:1]
                             self.buffer = self.buffer[1:]
                             n_bytes = struct.unpack('B', working_buffer)[0]
                             if len(self.buffer) < n_bytes:
-                                raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
+                                raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, n_bytes, len(self.buffer)))
                             working_buffer = self.buffer[0:n_bytes]
                             self.buffer = self.buffer[n_bytes:]
                             s = working_buffer.decode('utf-8')
@@ -1436,38 +1437,38 @@ class STDR(ABC):
                         self.set_value(FieldKey, result)
                         return
                     elif Bytes == 'f':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     for _ in range(K):
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result.append(struct.unpack(fmt, working_buffer)[0])
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xB': # list of list of '0' or '1'
                     if Bytes.isdigit():
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'n':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'f':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xD': # list of list of '0' or '1'
                     if Bytes.isdigit():
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'n':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'f':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xN': # list of a list of nibbles
@@ -1486,17 +1487,17 @@ class STDR(ABC):
                             result = result[:-1]
                             
                     elif Bytes == 'n':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id,method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'f':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
 
                 elif Type == 'xV': # list of 2-element tuples
                     if Bytes.isdigit():
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, str(K) + '*'.join((Type, Bytes))))
                     elif Bytes == 'n':
                         # index of the length_for_code list is the data type code mention in page 64 for GEN_DATA field
                         # first 8 elements are size in bytes for B*0, U*1, U*2, U*4, I*1, I*2, I*4, R*4, R*8 
@@ -1544,7 +1545,7 @@ class STDR(ABC):
                                 if n_bits % 8 != 0:
                                     n_bytes += 1
                                 if len(self.buffer) < n_bytes:
-                                    raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
+                                    raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, n_bytes, len(self.buffer)))
                                 working_buffer = self.buffer[0:n_bytes]
                                 self.buffer = self.buffer[n_bytes:]
                                 result = ['0'] * n_bits
@@ -1570,13 +1571,13 @@ class STDR(ABC):
                                    
                         return        
                     elif Bytes == 'f':
-                        raise STDFError("%s._unpack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name, FieldKey, self.hexify(pkg), str(K) + '*'.join((Type, Bytes)), result))
                     self.set_value(FieldKey, result)
                 else:
-                    raise STDFError("%s._pack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, str(K) + '*'.join((Type, Bytes))))
+                    raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, str(K) + '*'.join((Type, Bytes))))
             else:
                 if Type == 'U': # unsigned integer
                     if Bytes.isdigit():
@@ -1585,15 +1586,15 @@ class STDR(ABC):
                         elif Bytes == '4': fmt = "%sL" % self.endian # unsigned long
                         elif Bytes == '8': fmt = "%sQ" % self.endian # unsigned long long
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                         if len(self.buffer) < int(Bytes):
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, Bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result = struct.unpack(fmt, working_buffer)[0]
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'." % (self.id, method_name, FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 elif Type == 'I': # signed integer
@@ -1603,15 +1604,15 @@ class STDR(ABC):
                         elif Bytes == '4': fmt = "%sl" % self.endian # signed long
                         elif Bytes == '8': fmt = "%sq" % self.endian # signed long long
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
                         if len(self.buffer) < int(Bytes):
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, Bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result = struct.unpack(fmt, working_buffer)[0]
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'." % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 elif Type == 'R': # float
@@ -1619,15 +1620,15 @@ class STDR(ABC):
                         if Bytes == '4': fmt = "%sf" % self.endian # float
                         elif Bytes == '8': fmt = "%sd" % self.endian # double
                         else:
-                            raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                            raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                         if len(self.buffer) < int(Bytes):
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, Bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result = struct.unpack(fmt, working_buffer)[0]
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'." % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     if STDR.float_prec_digits != -1:
                         leading = round(result,0)
                         len_lead = len(str(leading))
@@ -1637,7 +1638,7 @@ class STDR(ABC):
                 elif Type == 'C': # string
                     if Bytes.isdigit(): # C*1 C*2 ...
                         if len(self.buffer) < int(Bytes):
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, Bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         result = working_buffer.decode()
@@ -1646,33 +1647,34 @@ class STDR(ABC):
                         self.buffer = self.buffer[1:]
                         n_bytes = struct.unpack('B', working_buffer)[0]
                         if len(self.buffer) < n_bytes:
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
                         result = working_buffer.decode('utf-8')
                     elif Bytes == 'f': # C*f
                         n_bytes = self.get_fields(Ref)[3]
                         if len(self.buffer) < n_bytes:
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
                         result = working_buffer.decode()
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%(%s) : Unsupported type '%s'." % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 elif Type == 'B': # list of single character strings being '0' or '1' (max length = 255*8 = 2040 bits)
                     if Bytes.isdigit(): # B*1 B*2 ...
                         if len(self.buffer) < int(Bytes):
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, Bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         temp = struct.unpack('B' * int(Bytes), working_buffer) # temp is a list (tuple) of 'Bytes' unsigned 1 byte bytes
                         result = ['0'] * (int(Bytes) * 8)
                         for Byte in range(len(temp)):
                             for Bit in range(8):
-                                mask = pow(2, Bit)
+                                ## to be consistent with pack
+                                mask = pow(2, 7-Bit)
                                 if (temp[Byte] & mask) == mask :
                                     result[(Byte * 8) + Bit] = '1'
                     elif Bytes == 'n': # B*n
@@ -1680,7 +1682,7 @@ class STDR(ABC):
                         self.buffer = self.buffer[1:]
                         n_bytes = struct.unpack('B', working_buffer)[0]
                         if len(self.buffer) < n_bytes:
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
                         temp = struct.unpack('B' * n_bytes, working_buffer)
@@ -1690,15 +1692,15 @@ class STDR(ABC):
                                 b = (temp[Byte] >> Bit) & 1
                                 result[(Byte * 8) + Bit] = str(b)
                     elif Bytes == 'f': # B*f
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'." % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 elif Type == 'D': # list of single character strings being '0' and '1'(max length = 65535 bits)
                     if Bytes.isdigit():
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
                     elif Bytes == 'n':
                         working_buffer = self.buffer[0:2]
                         self.buffer = self.buffer[2:]
@@ -1707,7 +1709,7 @@ class STDR(ABC):
                         if n_bits % 8 != 0:
                             n_bytes += 1
                         if len(self.buffer) < n_bytes:
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
                         result = ['0'] * n_bits
@@ -1717,16 +1719,16 @@ class STDR(ABC):
                                 if ((B >> Bit) & 1) == 1:
                                     result[(Byte * 8) + Bit] = '1'
                     elif Bytes == 'f':
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'." % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id, method_name,FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 elif Type == 'N': # list of integers
                     if Bytes.isdigit():
                         if len(self.buffer) < int(Bytes):
-                            raise STDFError("%s._unpack_item(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, Bytes, len(self.buffer)))
+                            raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
                         brol = []
@@ -1739,12 +1741,12 @@ class STDR(ABC):
                         brol = brol[:int(Bytes)]
                         self.set_value(FieldID, brol)
                     elif Bytes == 'n':
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                     elif Bytes == 'f':
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._unpack_item(%s) : Unsupported type '%s'." % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'." % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 elif Type == 'V': # tuple (type, value) where type is defined in spec page 62
@@ -1764,14 +1766,14 @@ class STDR(ABC):
                     13 = N*1 Unsigned nibble
                     '''
                     if Bytes.isdigit():
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
                     elif Bytes == 'n':
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
                     elif Bytes == 'f':
-                        raise STDFError("%s._pack_item(%s) : Unimplemented type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
+                        raise STDFError("%s.%s(%s) : Unimplemented type '%s'" % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                     else:
-                        raise STDFError("%s._pack_item(%s) : Unsupported type '%s'" % (self.id, FieldKey, '*'.join((Type, Bytes))))
-                    if self.local_debug: print("%s._unpack_item(%s)\n   '%s' [%s] -> %s" % (self.id, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
+                        raise STDFError("%s.%s(%s) : Unsupported type '%s'" % (self.id,method_name, FieldKey, '*'.join((Type, Bytes))))
+                    if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
                     self.set_value(FieldID, result)
 
                 else:
