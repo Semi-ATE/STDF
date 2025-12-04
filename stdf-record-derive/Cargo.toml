@@ -1,0 +1,15 @@
+[package]
+name = "stdf-record-derive"
+version = "0.2.0"
+authors = ["Casey Marshall <git@cmars.tech>"]
+description = "Procedural macros supporting the `stdf` crate"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+syn = { version = "2.0", features = ["printing"] }
+proc-macro2 = "1.0"
+quote = "1.0"
+
+[lib]
+proc-macro = true

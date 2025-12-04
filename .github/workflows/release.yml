@@ -1,0 +1,277 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to package registries'
+        required: true
+        type: boolean
+        default: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Read version from VERSION file
+  read-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read VERSION
+        id: version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+  # Build Rust binary and library for multiple platforms
+  build-rust:
+    needs: read-version
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact-name: stdf-windows-x64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact-name: stdf-linux-x64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact-name: stdf-linux-arm64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact-name: stdf-macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: |
+            target/${{ matrix.target }}/release/stdf${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+  # Build Windows MSI installer
+  build-msi:
+    needs: read-version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-wix
+        run: cargo install cargo-wix
+      
+      - name: Build MSI
+        run: cargo wix --nocapture
+      
+      - name: Upload MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: target/wix/*.msi
+
+  # Build Conda packages
+  build-conda:
+    needs: read-version
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win-64
+          - os: ubuntu-latest
+            platform: linux-64
+          - os: ubuntu-latest
+            platform: linux-aarch64
+          - os: macos-latest
+            platform: osx-arm64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: "3.11"
+          channels: conda-forge
+          channel-priority: strict
+      
+      - name: Install conda-build
+        run: conda install -y conda-build anaconda-client
+      
+      - name: Install Rust (via conda)
+        run: conda install -y rust
+      
+      - name: Build Rust conda package
+        run: |
+          conda build conda --output-folder dist/conda
+      
+      - name: Build Python conda package
+        run: |
+          conda build conda/python --output-folder dist/conda
+      
+      - name: Upload conda packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda-${{ matrix.platform }}
+          path: dist/conda/**/*.tar.bz2
+
+  # Build Python wheels for PyPI
+  build-wheels:
+    needs: read-version
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64
+          - os: ubuntu-latest
+            target: x86_64
+          - os: ubuntu-latest
+            target: aarch64
+          - os: macos-latest
+            target: aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install maturin
+        run: pip install maturin
+      
+      - name: Build wheels
+        run: maturin build --release --target ${{ matrix.target }} --features python
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.target }}
+          path: target/wheels/*.whl
+
+  # Build source distribution for PyPI
+  build-sdist:
+    needs: read-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install maturin
+        run: pip install maturin
+      
+      - name: Build sdist
+        run: maturin sdist
+      
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: target/wheels/*.tar.gz
+
+  # Build Debian package
+  build-deb:
+    needs: read-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Build deb package
+        run: cargo deb
+      
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-package
+          path: target/debian/*.deb
+
+  # Publish to registries (only if publish input is true)
+  publish:
+    needs: [read-version, build-rust, build-msi, build-conda, build-wheels, build-sdist, build-deb]
+    if: github.event.inputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Publish to crates.io
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          pip install twine
+          twine upload artifacts/wheels-*/*.whl artifacts/sdist/*.tar.gz
+      
+      - name: Setup Miniconda for publishing
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+      
+      - name: Publish to Anaconda
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          conda install -y anaconda-client
+          anaconda -t $ANACONDA_TOKEN upload artifacts/conda-*/**/*.tar.bz2
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.read-version.outputs.version }}
+          name: Release v${{ needs.read-version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/windows-msi/*.msi
+            artifacts/debian-package/*.deb
+            artifacts/stdf-*/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

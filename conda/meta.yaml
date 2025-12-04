@@ -1,0 +1,44 @@
+{% set version = load_file_data('VERSION').strip() %}
+
+package:
+  name: semi-ate-stdf
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+  script:
+    - cargo build --release  # [not win]
+    - cargo build --release  # [win]
+    - mkdir -p $PREFIX/bin  # [not win]
+    - cp target/release/stdf $PREFIX/bin/  # [not win]
+    - if not exist "%PREFIX%\Library\bin" mkdir "%PREFIX%\Library\bin"  # [win]
+    - copy target\release\stdf.exe "%PREFIX%\Library\bin\"  # [win]
+
+requirements:
+  build:
+    - {{ compiler('rust') }}
+    - cargo
+  host:
+    - rust
+  run:
+
+test:
+  commands:
+    - stdf help
+
+about:
+  home: https://github.com/yourusername/STDF
+  license: MIT OR Apache-2.0
+  license_file: LICENSE
+  summary: Standard Test Data Format (STDF) library and tools
+  description: |
+    Rust implementation of Standard Test Data Format (STDF) parser and writer
+    for semiconductor test equipment data.
+  dev_url: https://github.com/yourusername/STDF
+
+extra:
+  recipe-maintainers:
+    - yourusername

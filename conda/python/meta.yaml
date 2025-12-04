@@ -1,0 +1,45 @@
+{% set version = load_file_data('../VERSION').strip() %}
+
+package:
+  name: semi-ate-stdf-python
+  version: {{ version }}
+
+source:
+  path: ../..
+
+build:
+  number: 0
+  script: |
+    {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+
+requirements:
+  build:
+    - {{ compiler('rust') }}
+    - cargo
+    - maturin >=1.0,<2.0
+  host:
+    - python
+    - pip
+    - maturin >=1.0,<2.0
+  run:
+    - python
+
+test:
+  imports:
+    - stdf
+  commands:
+    - python -c "import stdf; print(stdf.__version__)"
+
+about:
+  home: https://github.com/yourusername/STDF
+  license: MIT OR Apache-2.0
+  license_file: LICENSE
+  summary: Python bindings for Semi-ATE-stdf (Standard Test Data Format library)
+  description: |
+    Python bindings to a fast Rust implementation for parsing and writing
+    Standard Test Data Format (STDF) files used in semiconductor testing.
+  dev_url: https://github.com/yourusername/STDF
+
+extra:
+  recipe-maintainers:
+    - yourusername

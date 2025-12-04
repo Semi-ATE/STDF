@@ -1,0 +1,12 @@
+[package]
+name = "semi-ate-stdf"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+description = "Standard Test Data Format (STDF) library and tools"
+license = "MIT OR Apache-2.0"
+
+[package.metadata.wix]
+upgrade-guid = "YOUR-UPGRADE-GUID-HERE"
+path-guid = "YOUR-PATH-GUID-HERE"
+license = false
+eula = false

@@ -1,0 +1,33 @@
+[package]
+name = "semi-ate-stdf"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+description = "Standard Test Data Format (STDF) library and tools - Rust implementation with Python bindings"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/STDF"
+keywords = ["stdf", "semiconductor", "test", "ate"]
+categories = ["parser-implementations", "encoding"]
+
+[lib]
+name = "stdf"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "stdf"
+path = "src/main.rs"
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+byte = "0.2"
+memmap2 = "0.9"
+stdf-record-derive = { path = "stdf-record-derive", version = "0.2" }
+
+[features]
+default = []
+python = ["pyo3"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
