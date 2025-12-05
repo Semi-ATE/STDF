@@ -1,7 +1,7 @@
 use std::env;
 use std::process;
 
-use stdf::parser::StdfParser;
+use stdf::parsers::StdfParser;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -79,35 +79,58 @@ fn main() {
             println!("Convert command not yet implemented");
             // TODO: Implement convert command
         }
-        "is_ft" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} is_ft <stdf_file>", args[0]);
+        "is" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing arguments");
+                eprintln!("Usage: {} is <ft|ws> <stdf_file>", args[0]);
                 process::exit(1);
             }
-            let filename = &args[2];
-            match check_is_ft(filename) {
-                Ok(true) => process::exit(0),  // Is FT
-                Ok(false) => process::exit(1), // Not FT (is WS)
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    process::exit(2);
+            let test_type = args[2].to_lowercase();
+            let filename = &args[3];
+            
+            match test_type.as_str() {
+                "ft" => {
+                    match check_is_ft(filename) {
+                        Ok(true) => process::exit(0),  // Is FT
+                        Ok(false) => process::exit(1), // Not FT (is WS)
+                        Err(e) => {
+                            eprintln!("Error: {:?}", e);
+                            process::exit(2);
+                        }
+                    }
+                }
+                "ws" => {
+                    match check_is_ws(filename) {
+                        Ok(true) => process::exit(0),  // Is WS
+                        Ok(false) => process::exit(1), // Not WS (is FT)
+                        Err(e) => {
+                            eprintln!("Error: {:?}", e);
+                            process::exit(2);
+                        }
+                    }
+                }
+                _ => {
+                    eprintln!("Error: Invalid test type '{}'. Use 'ft' or 'ws'", test_type);
+                    eprintln!("Usage: {} is <ft|ws> <stdf_file>", args[0]);
+                    process::exit(1);
                 }
             }
         }
-        "is_ws" => {
+        "endian" => {
             if args.len() < 3 {
                 eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} is_ws <stdf_file>", args[0]);
+                eprintln!("Usage: {} endian <stdf_file>", args[0]);
                 process::exit(1);
             }
             let filename = &args[2];
-            match check_is_ws(filename) {
-                Ok(true) => process::exit(0),  // Is WS
-                Ok(false) => process::exit(1), // Not WS (is FT)
+            match get_endian(filename) {
+                Ok(endian) => {
+                    println!("{}", endian);
+                    process::exit(0);
+                }
                 Err(e) => {
                     eprintln!("Error: {:?}", e);
-                    process::exit(2);
+                    process::exit(1);
                 }
             }
         }
@@ -128,9 +151,10 @@ fn print_usage(program: &str) {
     println!("  dump <file>                      - Dump all records");
     println!("  dump <record_types...> <file>    - Dump specific record types");
     println!("                                     Example: dump MIR PRR file.std");
-    println!("  validate <file>  - Validate STDF file structure");
-    println!("  is_ft <file>     - Check if file is Final Test (exit 0=FT, 1=WS, 2=error)");
-    println!("  is_ws <file>     - Check if file is Wafer Sort (exit 0=WS, 1=FT, 2=error)");
+    println!("  validate <file>     - Validate STDF file structure");
+    println!("  is <ft|ws> <file>   - Check if file is Final Test or Wafer Sort");
+    println!("                        (exit 0=match, 1=no match, 2=error)");
+    println!("  endian <file>       - Get file endianness (outputs: LE or BE)");
     println!("  convert <file>   - Convert STDF file to another format (not yet implemented)");
     println!("  help             - Show this help message");
 }
@@ -162,4 +186,14 @@ fn check_is_ws(filename: &str) -> Result<bool, std::io::Error> {
     let parser = StdfParser::new();
     let has_wir = parser.has_wir_record(filename)?;
     Ok(has_wir) // WS if WIR found
+}
+
+fn get_endian(filename: &str) -> Result<String, std::io::Error> {
+    use stdf::StdfRecordIterator;
+    let iter = StdfRecordIterator::new(filename)?;
+    let endian = iter.endian();
+    Ok(match endian {
+        byte::ctx::Endian::Little => "LE".to_string(),
+        byte::ctx::Endian::Big => "BE".to_string(),
+    })
 }

@@ -291,9 +291,118 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
         }
     };
     
+    // Generate ascii() method for ATDF format
+    let ascii_fields = record_struct.fields.iter().map(|ref x| {
+        let name = x.ident.as_ref().unwrap();
+        let ty = &x.ty;
+        
+        // Check if this is an array field
+        if array_length_attr(x).is_some() {
+            // For arrays, we'll format them specially or skip for now
+            quote! {
+                // Arrays in ATDF are complex, skip for now
+                result.push_str("");
+            }
+        } else {
+            // For scalar fields, convert based on type
+            let ty_str = quote!(#ty).to_string();
+            if ty_str.contains("Cn") {
+                quote! {
+                    result.push_str(&String::from_utf8_lossy(self.#name.0));
+                }
+            } else if ty_str.contains("Bn") {
+                quote! {
+                    // Binary data, skip or encode
+                    result.push_str("");
+                }
+            } else if ty_str.contains("U4T") {
+                quote! {
+                    // Timestamp formatting
+                    if self.#name.0 == 0 {
+                        result.push_str("");
+                    } else {
+                        result.push_str(&format!("{}", self.#name));
+                    }
+                }
+            } else if ty_str.contains("B1") {
+                quote! {
+                    result.push_str(&format!("{:08b}", self.#name.0));
+                }
+            } else if ty_str.contains("C1") {
+                quote! {
+                    if self.#name.0.is_ascii_graphic() || self.#name.0 == b' ' {
+                        result.push(self.#name.0 as char);
+                    } else {
+                        result.push_str(&format!("{}", self.#name.0));
+                    }
+                }
+            } else if ty_str.contains("I2") {
+                quote! {
+                    if self.#name.0 == std::i16::MIN {
+                        result.push_str("");
+                    } else {
+                        result.push_str(&format!("{}", self.#name.0));
+                    }
+                }
+            } else if ty_str.contains("I4") {
+                quote! {
+                    if self.#name.0 == std::i32::MIN {
+                        result.push_str("");
+                    } else {
+                        result.push_str(&format!("{}", self.#name.0));
+                    }
+                }
+            } else if ty_str.contains("I8") {
+                quote! {
+                    if self.#name.0 == std::i64::MIN {
+                        result.push_str("");
+                    } else {
+                        result.push_str(&format!("{}", self.#name.0));
+                    }
+                }
+            } else if ty_str.contains("I1") {
+                quote! {
+                    if self.#name.0 == std::i8::MIN {
+                        result.push_str("");
+                    } else {
+                        result.push_str(&format!("{}", self.#name.0));
+                    }
+                }
+            } else if ty_str.contains("R4") || ty_str.contains("R8") {
+                quote! {
+                    if self.#name.0.is_nan() {
+                        result.push_str("");
+                    } else {
+                        result.push_str(&format!("{}", self.#name.0));
+                    }
+                }
+            } else {
+                // Generic numeric type
+                quote! {
+                    result.push_str(&format!("{}", self.#name.0));
+                }
+            }
+        }
+    });
+    
+    let record_name = name.to_string();
+    let ascii_impl = quote! {
+        impl #impl_generics #name #ty_generics #where_clause {
+            pub fn ascii(&self) -> String {
+                let mut result = format!("{}:", #record_name);
+                #(
+                    #ascii_fields
+                    result.push('|');
+                )*
+                result
+            }
+        }
+    };
+    
     TokenStream::from(quote! {
         #try_read
         #try_write
         #binary_impl
+        #ascii_impl
     })
 }

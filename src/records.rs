@@ -11,7 +11,7 @@ macro_rules! impl_display {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 writeln!(f, "{} ({}):", stringify!($name), $desc)?;
                 $(
-                    writeln!(f, "  {}: {}", stringify!($field), self.$field)?;
+                    writeln!(f, "  {}: {}", stringify!($field).to_uppercase(), self.$field)?;
                 )*
                 Ok(())
             }
@@ -22,7 +22,7 @@ macro_rules! impl_display {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 writeln!(f, "{} ({}):", stringify!($name), $desc)?;
                 $(
-                    writeln!(f, "  {}: {}", stringify!($field), self.$field)?;
+                    writeln!(f, "  {}: {}", stringify!($field).to_uppercase(), self.$field)?;
                 )*
                 Ok(())
             }
@@ -287,10 +287,10 @@ pub struct PGR<'a> {
 impl<'a> std::fmt::Display for PGR<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "PGR (Pin Group Record):")?;
-        writeln!(f, "  grp_indx: {}", self.grp_indx)?;
-        writeln!(f, "  grp_nam: {}", self.grp_nam)?;
-        writeln!(f, "  indx_cnt: {}", self.indx_cnt)?;
-        writeln!(f, "  pmr_indx: {:?}", self.pmr_indx)?;
+        writeln!(f, "  GRP_INDX: {}", self.grp_indx)?;
+        writeln!(f, "  GRP_NAM: {}", self.grp_nam)?;
+        writeln!(f, "  INDX_CNT: {}", self.indx_cnt)?;
+        writeln!(f, "  PMR_INDX: {:?}", self.pmr_indx)?;
         Ok(())
     }
 }
@@ -325,9 +325,9 @@ pub struct PLR<'a> {
 impl<'a> std::fmt::Display for PLR<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "PLR (Pin List Record):")?;
-        writeln!(f, "  grp_cnt: {}", self.grp_cnt)?;
-        writeln!(f, "  grp_indx: {:?}", self.grp_indx)?;
-        writeln!(f, "  grp_mode: {:?}", self.grp_mode)?;
+        writeln!(f, "  GRP_CNT: {}", self.grp_cnt)?;
+        writeln!(f, "  GRP_INDX: {:?}", self.grp_indx)?;
+        writeln!(f, "  GRP_MODE: {:?}", self.grp_mode)?;
         Ok(())
     }
 }
@@ -344,8 +344,8 @@ pub struct RDR {
 impl std::fmt::Display for RDR {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "RDR (Retest Data Record):")?;
-        writeln!(f, "  num_bins: {}", self.num_bins)?;
-        writeln!(f, "  rtst_bin: {:?}", self.rtst_bin)?;
+        writeln!(f, "  NUM_BINS: {}", self.num_bins)?;
+        writeln!(f, "  RTST_BIN: {:?}", self.rtst_bin)?;
         Ok(())
     }
 }
@@ -396,26 +396,26 @@ pub struct SDR<'a> {
 impl<'a> std::fmt::Display for SDR<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "SDR (Site Description Record):")?;
-        writeln!(f, "  head_num: {}", self.head_num)?;
-        writeln!(f, "  site_grp: {}", self.site_grp)?;
-        writeln!(f, "  site_cnt: {}", self.site_cnt)?;
-        writeln!(f, "  site_num: {:?}", self.site_num)?;
-        writeln!(f, "  hand_typ: {}", self.hand_typ)?;
-        writeln!(f, "  hand_id: {}", self.hand_id)?;
-        writeln!(f, "  card_typ: {}", self.card_typ)?;
-        writeln!(f, "  card_id: {}", self.card_id)?;
-        writeln!(f, "  load_typ: {}", self.load_typ)?;
-        writeln!(f, "  load_id: {}", self.load_id)?;
-        writeln!(f, "  dib_typ: {}", self.dib_typ)?;
-        writeln!(f, "  dib_id: {}", self.dib_id)?;
-        writeln!(f, "  cabl_typ: {}", self.cabl_typ)?;
-        writeln!(f, "  cabl_id: {}", self.cabl_id)?;
-        writeln!(f, "  cont_typ: {}", self.cont_typ)?;
-        writeln!(f, "  cont_id: {}", self.cont_id)?;
-        writeln!(f, "  lasr_typ: {}", self.lasr_typ)?;
-        writeln!(f, "  lasr_id: {}", self.lasr_id)?;
-        writeln!(f, "  extr_typ: {}", self.extr_typ)?;
-        writeln!(f, "  extr_id: {}", self.extr_id)?;
+        writeln!(f, "  HEAD_NUM: {}", self.head_num)?;
+        writeln!(f, "  SITE_GRP: {}", self.site_grp)?;
+        writeln!(f, "  SITE_CNT: {}", self.site_cnt)?;
+        writeln!(f, "  SITE_NUM: {:?}", self.site_num)?;
+        writeln!(f, "  HAND_TYP: {}", self.hand_typ)?;
+        writeln!(f, "  HAND_ID: {}", self.hand_id)?;
+        writeln!(f, "  CARD_TYP: {}", self.card_typ)?;
+        writeln!(f, "  CARD_ID: {}", self.card_id)?;
+        writeln!(f, "  LOAD_TYP: {}", self.load_typ)?;
+        writeln!(f, "  LOAD_ID: {}", self.load_id)?;
+        writeln!(f, "  DIB_TYP: {}", self.dib_typ)?;
+        writeln!(f, "  DIB_ID: {}", self.dib_id)?;
+        writeln!(f, "  CABL_TYP: {}", self.cabl_typ)?;
+        writeln!(f, "  CABL_ID: {}", self.cabl_id)?;
+        writeln!(f, "  CONT_TYP: {}", self.cont_typ)?;
+        writeln!(f, "  CONT_ID: {}", self.cont_id)?;
+        writeln!(f, "  LASR_TYP: {}", self.lasr_typ)?;
+        writeln!(f, "  LASR_ID: {}", self.lasr_id)?;
+        writeln!(f, "  EXTR_TYP: {}", self.extr_typ)?;
+        writeln!(f, "  EXTR_ID: {}", self.extr_id)?;
         Ok(())
     }
 }
@@ -678,11 +678,11 @@ pub struct MPR<'a> {
 impl<'a> std::fmt::Display for MPR<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "MPR (Multiple-Result Parametric Record):")?;
-        writeln!(f, "  test_num: {}", self.test_num)?;
-        writeln!(f, "  head_num: {}", self.head_num)?;
-        writeln!(f, "  site_num: {}", self.site_num)?;
-        writeln!(f, "  test_flg: {}", self.test_flg)?;
-        writeln!(f, "  rtn_rslt: {:?}", self.rtn_rslt)?;
+        writeln!(f, "  TEST_NUM: {}", self.test_num)?;
+        writeln!(f, "  HEAD_NUM: {}", self.head_num)?;
+        writeln!(f, "  SITE_NUM: {}", self.site_num)?;
+        writeln!(f, "  TEST_FLG: {}", self.test_flg)?;
+        writeln!(f, "  RTN_RSLT: {:?}", self.rtn_rslt)?;
         Ok(())
     }
 }
@@ -751,11 +751,11 @@ pub struct FTR<'a> {
 impl<'a> std::fmt::Display for FTR<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "FTR (Functional Test Record):")?;
-        writeln!(f, "  test_num: {}", self.test_num)?;
-        writeln!(f, "  head_num: {}", self.head_num)?;
-        writeln!(f, "  site_num: {}", self.site_num)?;
-        writeln!(f, "  test_flg: {}", self.test_flg)?;
-        writeln!(f, "  num_fail: {}", self.num_fail)?;
+        writeln!(f, "  TEST_NUM: {}", self.test_num)?;
+        writeln!(f, "  HEAD_NUM: {}", self.head_num)?;
+        writeln!(f, "  SITE_NUM: {}", self.site_num)?;
+        writeln!(f, "  TEST_FLG: {}", self.test_flg)?;
+        writeln!(f, "  NUM_FAIL: {}", self.num_fail)?;
         Ok(())
     }
 }
@@ -779,7 +779,13 @@ impl std::fmt::Display for EPS {
 }
 
 impl EPS {
-    pub fn binary(&self, endian: byte::ctx::Endian) -> Vec<u8> {
+    pub fn ascii(&self) -> String {
+        "EPS:".to_string()
+    }
+}
+
+impl EPS {
+    pub fn binary(&self, _endian: byte::ctx::Endian) -> Vec<u8> {
         // EPS has no data fields, only header: REC_LEN=0, REC_TYP=20, REC_SUB=20
         let mut bytes = vec![0u8; 4];
         // REC_LEN = 0 (no data)
@@ -806,8 +812,8 @@ pub struct GDR<'a> {
 impl<'a> std::fmt::Display for GDR<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "GDR (Generic Data Record):")?;
-        writeln!(f, "  fld_cnt: {}", self.fld_cnt)?;
-        writeln!(f, "  gen_data: {:?}", self.gen_data)?;
+        writeln!(f, "  FLD_CNT: {}", self.fld_cnt)?;
+        writeln!(f, "  GEN_DATA: {:?}", self.gen_data)?;
         Ok(())
     }
 }

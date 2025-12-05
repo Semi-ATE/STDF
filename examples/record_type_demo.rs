@@ -1,6 +1,6 @@
 use std::env;
 use std::collections::HashMap;
-use stdf::{StdfRecordIterator, record_type};
+use stdf::{StdfRecordIterator, stdf_record_type};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -23,7 +23,7 @@ fn main() {
                         total += 1;
                         
                         // Get record type without parsing
-                        match record_type(&record_bytes) {
+                        match stdf_record_type(&record_bytes) {
                             Ok(rec_type) => {
                                 *counts.entry(rec_type.to_string()).or_insert(0) += 1;
                             },

@@ -2,7 +2,7 @@
 
 mod common;
 
-use stdf::{StdfRecordIterator, parse_record, V4};
+use stdf::{StdfRecordIterator, stdf_parse_record, V4};
 use byte::ctx::Endian;
 
 #[test]
@@ -21,7 +21,7 @@ fn roundtrip_all_records_from_real_file() {
     for result in iter.take(100) {
         let original_bytes = result.expect("Failed to read record");
         
-        let record = parse_record(&original_bytes, endian)
+        let record = stdf_parse_record(&original_bytes, endian)
             .expect("Failed to parse record");
         
         let regenerated_bytes = get_record_binary(&record, endian);
@@ -54,7 +54,7 @@ fn roundtrip_preserves_header() {
     for result in iter.take(10) {
         let original_bytes = result.expect("Failed to read record");
         
-        let record = parse_record(&original_bytes, endian)
+        let record = stdf_parse_record(&original_bytes, endian)
             .expect("Failed to parse record");
         
         let regenerated_bytes = get_record_binary(&record, endian);
@@ -73,7 +73,7 @@ fn roundtrip_specific_far_record() {
     // FAR with Big Endian: REC_LEN=2, REC_TYP=0, REC_SUB=10, cpu_type=2, stdf_ver=4
     let original = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
     
-    let record = parse_record(&original, Endian::Big)
+    let record = stdf_parse_record(&original, Endian::Big)
         .expect("Failed to parse FAR");
     
     if let V4::FAR(far) = record {
@@ -93,7 +93,7 @@ fn roundtrip_specific_pir_record() {
     // PIR with Big Endian: REC_LEN=2, REC_TYP=5, REC_SUB=10, head_num=1, site_num=1
     let original = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x01];
     
-    let record = parse_record(&original, Endian::Big)
+    let record = stdf_parse_record(&original, Endian::Big)
         .expect("Failed to parse PIR");
     
     if let V4::PIR(pir) = record {
@@ -113,7 +113,7 @@ fn roundtrip_respects_endianness() {
     // Test with little endian FAR
     let le_bytes = vec![0x02, 0x00, 0x00, 0x0A, 0x02, 0x04];
     
-    let record = parse_record(&le_bytes, Endian::Little)
+    let record = stdf_parse_record(&le_bytes, Endian::Little)
         .expect("Failed to parse LE FAR");
     
     if let V4::FAR(far) = record {
@@ -126,7 +126,7 @@ fn roundtrip_respects_endianness() {
     // Test with big endian FAR
     let be_bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
     
-    let record = parse_record(&be_bytes, Endian::Big)
+    let record = stdf_parse_record(&be_bytes, Endian::Big)
         .expect("Failed to parse BE FAR");
     
     if let V4::FAR(far) = record {

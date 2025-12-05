@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{Error, ErrorKind, Read};
 use std::path::Path;
 
@@ -64,7 +64,7 @@ impl StdfParser {
         
         for result in iter {
             let record_bytes = result?;
-            match parse_record(&record_bytes, endian)? {
+            match stdf_parse_record(&record_bytes, endian)? {
                 V4::MIR(mir) => {
                     println!("{}", mir);
                     mir_found = true;
@@ -106,10 +106,10 @@ impl StdfParser {
         
         for result in iter {
             let record_bytes = result?;
-            let record_name = record_type(&record_bytes)?;
+            let record_name = stdf_record_type(&record_bytes)?;
             
             if dump_all || record_types.contains(&record_name.to_string()) {
-                let v4 = parse_record(&record_bytes, endian)?;
+                let v4 = stdf_parse_record(&record_bytes, endian)?;
                 println!("{}", v4);
             }
         }
@@ -210,6 +210,69 @@ impl<'a> Iterator for StdfRecordIterator {
     }
 }
 
+/// Iterator that yields ATDF records as parsed strings
+pub struct AtdfRecordIterator {
+    lines: Vec<String>,
+    index: usize,
+}
+
+impl AtdfRecordIterator {
+    /// Create a new iterator from a file path
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let content = fs::read_to_string(path)?;
+        let lines: Vec<String> = content
+            .lines()
+            .map(|s| s.to_string())
+            .collect();
+        
+        Ok(AtdfRecordIterator {
+            lines,
+            index: 0,
+        })
+    }
+
+    /// Create a new iterator from a string
+    pub fn from_string(content: String) -> Self {
+        let lines: Vec<String> = content
+            .lines()
+            .map(|s| s.to_string())
+            .collect();
+        
+        AtdfRecordIterator {
+            lines,
+            index: 0,
+        }
+    }
+}
+
+impl Iterator for AtdfRecordIterator {
+    type Item = Result<String, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.lines.len() {
+            return None;
+        }
+
+        let line = self.lines[self.index].clone();
+        self.index += 1;
+
+        // Skip empty lines
+        if line.trim().is_empty() {
+            return self.next();
+        }
+
+        // Validate line has ATDF format (RECORD_TYPE:fields...)
+        if !line.contains(':') {
+            return Some(Err(Error::new(
+                ErrorKind::InvalidData,
+                format!("Invalid ATDF format at line {}: missing colon separator", self.index)
+            )));
+        }
+
+        Some(Ok(line))
+    }
+}
+
 /// Get the record type name from raw record bytes
 /// 
 /// # Arguments
@@ -221,17 +284,17 @@ impl<'a> Iterator for StdfRecordIterator {
 /// 
 /// # Example
 /// ```no_run
-/// use stdf::{StdfRecordIterator, record_type};
+/// use stdf::{StdfRecordIterator, stdf_record_type};
 /// 
 /// let iter = StdfRecordIterator::new("test.std").unwrap();
 /// 
 /// for result in iter {
 ///     let record_bytes = result.unwrap();
-///     let rec_type = record_type(&record_bytes).unwrap();
+///     let rec_type = stdf_record_type(&record_bytes).unwrap();
 ///     println!("Record type: {}", rec_type);
 /// }
 /// ```
-pub fn record_type(record_bytes: &[u8]) -> Result<&'static str, Error> {
+pub fn stdf_record_type(record_bytes: &[u8]) -> Result<&'static str, Error> {
     if record_bytes.len() < 4 {
         return Err(Error::new(
             ErrorKind::InvalidData,
@@ -284,18 +347,18 @@ pub fn record_type(record_bytes: &[u8]) -> Result<&'static str, Error> {
 /// 
 /// # Example
 /// ```no_run
-/// use stdf::{StdfRecordIterator, parse_record};
+/// use stdf::{StdfRecordIterator, stdf_parse_record};
 /// 
 /// let mut iter = StdfRecordIterator::new("test.std").unwrap();
 /// let endian = iter.endian();
 /// 
 /// for result in iter {
 ///     let record_bytes = result.unwrap();
-///     let record = parse_record(&record_bytes, endian).unwrap();
+///     let record = stdf_parse_record(&record_bytes, endian).unwrap();
 ///     println!("{:?}", record);
 /// }
 /// ```
-pub fn parse_record(record_bytes: &[u8], endian: byte::ctx::Endian) -> Result<V4<'_>, Error> {
+pub fn stdf_parse_record(record_bytes: &[u8], endian: byte::ctx::Endian) -> Result<V4<'_>, Error> {
     if record_bytes.len() < 4 {
         return Err(Error::new(
             ErrorKind::InvalidData,
@@ -343,7 +406,7 @@ mod tests {
     #[test]
     fn parse_record_too_short() {
         let bytes = vec![0x00, 0x01]; // Only 2 bytes, need at least 4
-        let result = parse_record(&bytes, Endian::Big);
+        let result = stdf_parse_record(&bytes, Endian::Big);
         assert!(result.is_err());
         
         let err = result.unwrap_err();
@@ -354,7 +417,7 @@ mod tests {
     #[test]
     fn parse_record_empty() {
         let bytes = vec![];
-        let result = parse_record(&bytes, Endian::Big);
+        let result = stdf_parse_record(&bytes, Endian::Big);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidData);
     }
@@ -363,7 +426,7 @@ mod tests {
     fn parse_record_valid_far() {
         // FAR: REC_LEN=2, REC_TYP=0, REC_SUB=10, cpu_type=2, stdf_ver=4
         let bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
-        let result = parse_record(&bytes, Endian::Big);
+        let result = stdf_parse_record(&bytes, Endian::Big);
         assert!(result.is_ok());
         
         if let Ok(V4::FAR(far)) = result {
@@ -378,7 +441,7 @@ mod tests {
     fn parse_record_valid_pir() {
         // PIR: REC_LEN=2, REC_TYP=5, REC_SUB=10, head_num=1, site_num=2
         let bytes = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x02];
-        let result = parse_record(&bytes, Endian::Big);
+        let result = stdf_parse_record(&bytes, Endian::Big);
         assert!(result.is_ok());
         
         if let Ok(V4::PIR(pir)) = result {
@@ -393,12 +456,12 @@ mod tests {
     fn parse_record_respects_endianness() {
         // Little endian FAR
         let le_bytes = vec![0x02, 0x00, 0x00, 0x0A, 0x02, 0x04];
-        let le_result = parse_record(&le_bytes, Endian::Little);
+        let le_result = stdf_parse_record(&le_bytes, Endian::Little);
         assert!(le_result.is_ok());
         
         // Big endian FAR
         let be_bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
-        let be_result = parse_record(&be_bytes, Endian::Big);
+        let be_result = stdf_parse_record(&be_bytes, Endian::Big);
         assert!(be_result.is_ok());
         
         // Both should parse to the same values
@@ -413,7 +476,7 @@ mod tests {
     #[test]
     fn record_type_far() {
         let bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
-        let result = record_type(&bytes);
+        let result = stdf_record_type(&bytes);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "FAR");
     }
@@ -421,7 +484,7 @@ mod tests {
     #[test]
     fn record_type_pir() {
         let bytes = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x02];
-        let result = record_type(&bytes);
+        let result = stdf_record_type(&bytes);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "PIR");
     }
@@ -429,7 +492,7 @@ mod tests {
     #[test]
     fn record_type_unknown() {
         let bytes = vec![0x00, 0x02, 0xFF, 0xFF, 0x00, 0x00];
-        let result = record_type(&bytes);
+        let result = stdf_record_type(&bytes);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "UNKNOWN");
     }
@@ -437,7 +500,76 @@ mod tests {
     #[test]
     fn record_type_too_short() {
         let bytes = vec![0x00, 0x02];
-        let result = record_type(&bytes);
+        let result = stdf_record_type(&bytes);
         assert!(result.is_err());
     }
+}
+
+/// Get the record type from an ATDF line (first 3 characters before the colon)
+/// 
+/// # Arguments
+/// * `atdf_line` - A line from an ATDF file (e.g., "FAR:2|4|")
+/// 
+/// # Returns
+/// * `Ok(&str)` - The record type (e.g., "FAR", "MIR", "PRR")
+/// * `Err(Error)` - If the line doesn't contain a colon or is too short
+/// 
+/// # Example
+/// ```
+/// use stdf::parsers::atdf_record_type;
+/// 
+/// let line = "FAR:2|4|";
+/// let record_type = atdf_record_type(line).unwrap();
+/// assert_eq!(record_type, "FAR");
+/// ```
+pub fn atdf_record_type(atdf_line: &str) -> Result<&str, Error> {
+    let colon_pos = atdf_line.find(':')
+        .ok_or_else(|| Error::new(ErrorKind::InvalidData, "ATDF line missing colon separator"))?;
+    
+    if colon_pos == 0 {
+        return Err(Error::new(ErrorKind::InvalidData, "ATDF line has empty record type"));
+    }
+    
+    let record_type = &atdf_line[..colon_pos];
+    
+    // Validate it's 3 characters (standard STDF record type length)
+    if record_type.len() != 3 {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            format!("ATDF record type '{}' is not 3 characters", record_type)
+        ));
+    }
+    
+    Ok(record_type)
+}
+
+/// Parse an ATDF line into a V4 STDF record
+/// 
+/// # Arguments
+/// * `atdf_line` - A line from an ATDF file (e.g., "FAR:2|4|")
+/// 
+/// # Returns
+/// * `Ok(V4)` - Successfully parsed STDF record
+/// * `Err(Error)` - Parse error
+/// 
+/// # Example
+/// ```no_run
+/// use stdf::parsers::atdf_parse_record;
+/// 
+/// let line = "FAR:2|4|";
+/// let record = atdf_parse_record(line).unwrap();
+/// ```
+pub fn atdf_parse_record(atdf_line: &str) -> Result<V4<'static>, Error> {
+    let record_type = atdf_record_type(atdf_line)?;
+    
+    // Split the line into record type and fields
+    let fields_part = &atdf_line[record_type.len() + 1..]; // Skip "TYPE:"
+    let _fields: Vec<&str> = fields_part.split('|').collect();
+    
+    // TODO: Implement parsing logic for each record type
+    // For now, return an error indicating it's not implemented
+    Err(Error::new(
+        ErrorKind::Other,
+        format!("ATDF parsing for record type '{}' not yet implemented", record_type)
+    ))
 }

@@ -3,13 +3,18 @@ extern crate stdf_record_derive;
 
 pub mod types;
 pub mod records;
-pub mod parser;
+pub mod parsers;
 pub mod writer;
 
 // Re-export commonly used types
 pub use records::{Header, V4};
 pub use types::*;
-pub use parser::{StdfParser, StdfRecordIterator, parse_record, record_type, valid_file};
+pub use parsers::{
+    StdfParser, StdfRecordIterator, AtdfRecordIterator,
+    stdf_parse_record, stdf_record_type, 
+    atdf_parse_record, atdf_record_type,
+    valid_file
+};
 
 // Python bindings (when feature is enabled)
 #[cfg(feature = "python")]

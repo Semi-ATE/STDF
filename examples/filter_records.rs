@@ -5,7 +5,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     
     if args.len() < 2 {
-        eprintln!("Usage: {} <stdf_file> [record_type] [record_subtype]", args[0]);
+        eprintln!("Usage: {} <stdf_file> [stdf_record_type] [record_subtype]", args[0]);
         eprintln!("\nExample: {} file.std 1 10  (shows only MIR records)", args[0]);
         std::process::exit(1);
     }

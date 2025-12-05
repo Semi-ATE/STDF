@@ -1,5 +1,4 @@
-use stdf::{StdfRecordIterator, parse_record};
-use byte::ctx::Endian;
+use stdf::{StdfRecordIterator, stdf_parse_record};
 
 fn main() {
     let test_file = r".\data\diamond28_1_DMHACF91MV0LJM1878A_243_F2N_H_325165058_00_16062023_234311.std\diamond28_1_DMHACF91MV0LJM1878A_243_F2N_H_325165058_00_16062023_234311.std";
@@ -18,7 +17,7 @@ fn main() {
         let original_bytes = result.expect("Failed to read record");
         
         // Parse the record
-        let record = match parse_record(&original_bytes, endian) {
+        let record = match stdf_parse_record(&original_bytes, endian) {
             Ok(r) => r,
             Err(e) => {
                 println!("Record {}: Parse error: {}", idx, e);

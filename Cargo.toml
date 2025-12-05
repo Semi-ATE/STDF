@@ -15,7 +15,11 @@ crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "stdf"
-path = "src/main.rs"
+path = "src/stdf.rs"
+
+[[bin]]
+name = "atdf"
+path = "src/atdf.rs"
 
 [dependencies]
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }

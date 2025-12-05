@@ -1,5 +1,5 @@
 use std::env;
-use stdf::{StdfRecordIterator, parse_record, V4};
+use stdf::{StdfRecordIterator, stdf_parse_record, V4};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -24,7 +24,7 @@ fn main() {
                 match result {
                     Ok(record_bytes) => {
                         // Use the factory to parse the raw bytes into a V4 record
-                        match parse_record(&record_bytes, endian) {
+                        match stdf_parse_record(&record_bytes, endian) {
                             Ok(record) => {
                                 match record {
                                     V4::MIR(mir) => {
