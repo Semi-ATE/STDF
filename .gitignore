@@ -45,3 +45,9 @@ conda-bld/
 .coverage
 htmlcov/
 .tox/
+
+# Data files (keep only compressed versions)
+data/**/*.std
+data/**/*.stdf
+data/**/*.atd
+data/**/*.atdf

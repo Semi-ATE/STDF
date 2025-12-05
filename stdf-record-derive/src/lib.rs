@@ -301,99 +301,105 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
             // For arrays, we'll format them specially or skip for now
             quote! {
                 // Arrays in ATDF are complex, skip for now
-                result.push_str("");
+                field_value.push_str("");
             }
         } else {
             // For scalar fields, convert based on type
             let ty_str = quote!(#ty).to_string();
             if ty_str.contains("Cn") {
                 quote! {
-                    result.push_str(&String::from_utf8_lossy(self.#name.0));
+                    field_value.push_str(&String::from_utf8_lossy(self.#name.0));
                 }
             } else if ty_str.contains("Bn") {
                 quote! {
                     // Binary data, skip or encode
-                    result.push_str("");
+                    field_value.push_str("");
                 }
             } else if ty_str.contains("U4T") {
                 quote! {
                     // Timestamp formatting
                     if self.#name.0 == 0 {
-                        result.push_str("");
+                        field_value.push_str("");
                     } else {
-                        result.push_str(&format!("{}", self.#name));
+                        field_value.push_str(&format!("{}", self.#name));
                     }
                 }
             } else if ty_str.contains("B1") {
                 quote! {
-                    result.push_str(&format!("{:08b}", self.#name.0));
+                    field_value.push_str(&format!("{:08b}", self.#name.0));
                 }
             } else if ty_str.contains("C1") {
                 quote! {
                     if self.#name.0.is_ascii_graphic() || self.#name.0 == b' ' {
-                        result.push(self.#name.0 as char);
+                        field_value.push(self.#name.0 as char);
                     } else {
-                        result.push_str(&format!("{}", self.#name.0));
+                        field_value.push_str(&format!("{}", self.#name.0));
                     }
                 }
             } else if ty_str.contains("I2") {
                 quote! {
                     if self.#name.0 == std::i16::MIN {
-                        result.push_str("");
+                        field_value.push_str("");
                     } else {
-                        result.push_str(&format!("{}", self.#name.0));
+                        field_value.push_str(&format!("{}", self.#name.0));
                     }
                 }
             } else if ty_str.contains("I4") {
                 quote! {
                     if self.#name.0 == std::i32::MIN {
-                        result.push_str("");
+                        field_value.push_str("");
                     } else {
-                        result.push_str(&format!("{}", self.#name.0));
+                        field_value.push_str(&format!("{}", self.#name.0));
                     }
                 }
             } else if ty_str.contains("I8") {
                 quote! {
                     if self.#name.0 == std::i64::MIN {
-                        result.push_str("");
+                        field_value.push_str("");
                     } else {
-                        result.push_str(&format!("{}", self.#name.0));
+                        field_value.push_str(&format!("{}", self.#name.0));
                     }
                 }
             } else if ty_str.contains("I1") {
                 quote! {
                     if self.#name.0 == std::i8::MIN {
-                        result.push_str("");
+                        field_value.push_str("");
                     } else {
-                        result.push_str(&format!("{}", self.#name.0));
+                        field_value.push_str(&format!("{}", self.#name.0));
                     }
                 }
             } else if ty_str.contains("R4") || ty_str.contains("R8") {
                 quote! {
                     if self.#name.0.is_nan() {
-                        result.push_str("");
+                        field_value.push_str("");
                     } else {
-                        result.push_str(&format!("{}", self.#name.0));
+                        field_value.push_str(&format!("{}", self.#name.0));
                     }
                 }
             } else {
                 // Generic numeric type
                 quote! {
-                    result.push_str(&format!("{}", self.#name.0));
+                    field_value.push_str(&format!("{}", self.#name.0));
                 }
             }
         }
     });
     
     let record_name = name.to_string();
+    let field_count = record_struct.fields.len();
     let ascii_impl = quote! {
         impl #impl_generics #name #ty_generics #where_clause {
             pub fn ascii(&self) -> String {
                 let mut result = format!("{}:", #record_name);
+                let mut fields = Vec::with_capacity(#field_count);
                 #(
-                    #ascii_fields
-                    result.push('|');
+                    {
+                        let mut field_value = String::new();
+                        #ascii_fields
+                        fields.push(field_value);
+                    }
                 )*
+                result.push_str(&fields.join("|"));
                 result
             }
         }

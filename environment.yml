@@ -1,0 +1,10 @@
+name: Semi-ATE-STDF-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13
+  - pip
+  - py7zr
+  - pip:
+    - maturin
