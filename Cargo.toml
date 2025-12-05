@@ -22,6 +22,8 @@ pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 byte = "0.2"
 memmap2 = "0.9"
 stdf-record-derive = { path = "stdf-record-derive", version = "0.2" }
+flate2 = "1.0"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [features]
 default = []

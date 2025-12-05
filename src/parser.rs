@@ -1,12 +1,9 @@
 use std::fs::File;
-use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind, Read};
 use std::path::Path;
 
 extern crate byte;
 use byte::BytesExt;
-
-extern crate memmap2;
-use memmap2::MmapOptions;
 
 use crate::records::{Header, V4};
 
@@ -19,62 +16,428 @@ impl StdfParser {
         StdfParser {}
     }
 
+    /// Read file content
+    fn read_file_content<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, Error> {
+        let mut file = File::open(path)?;
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    /// Check if file contains WIR records (indicates Wafer Sort)
+    pub fn has_wir_record<P: AsRef<Path>>(&self, path: P) -> Result<bool, Error> {
+        let iter = StdfRecordIterator::new(path)?;
+        
+        for result in iter {
+            let record_bytes = result?;
+            // WIR has REC_TYP = 2 and REC_SUB = 10
+            // Bytes [2] and [3] contain REC_TYP and REC_SUB respectively
+            if record_bytes.len() >= 4 && record_bytes[2] == 2 && record_bytes[3] == 10 {
+                return Ok(true);
+            }
+        }
+        
+        Ok(false)
+    }
+
     /// Count records in an STDF file
     pub fn count_records<P: AsRef<Path>>(&self, path: P) -> Result<usize, Error> {
-        let f = File::open(path)?;
-        let m = unsafe { MmapOptions::new().map(&f)? };
-        let bytes = &m[..];
-        
-        let endian = Header::detect_endian(bytes)
-            .map_err(|x| Error::new(ErrorKind::Other, format!("{:?}", x)))?;
-        
-        let offset = &mut 0;
+        let iter = StdfRecordIterator::new(path)?;
         let mut count = 0;
         
-        loop {
-            match bytes.read_with::<V4>(offset, endian) {
-                Ok(_) => count += 1,
-                Err(byte::Error::BadOffset(x)) => {
-                    if x == bytes.len() {
-                        return Ok(count);
-                    } else {
-                        return Err(Error::new(
-                            ErrorKind::Other,
-                            format!("bad offset {} before EOF", x),
-                        ));
+        for result in iter {
+            result?;
+            count += 1;
+        }
+        
+        Ok(count)
+    }
+
+    /// Display MIR, WRR, and MRR records from an STDF file
+    pub fn info_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        let iter = StdfRecordIterator::new(path)?;
+        let endian = iter.endian();
+        
+        let mut mir_found = false;
+        let mut wrr_found = false;
+        let mut mrr_found = false;
+        
+        for result in iter {
+            let record_bytes = result?;
+            match parse_record(&record_bytes, endian)? {
+                V4::MIR(mir) => {
+                    println!("{}", mir);
+                    mir_found = true;
+                },
+                V4::WRR(wrr) => {
+                    if !wrr_found {
+                        println!("{}", wrr);
+                        wrr_found = true;
                     }
+                },
+                V4::MRR(mrr) => {
+                    println!("{}", mrr);
+                    mrr_found = true;
+                    // MRR is typically the last record, so we can stop here
+                    break;
+                },
+                _ => {}
+            }
+        }
+        
+        if !mir_found {
+            eprintln!("Warning: No MIR record found in file");
+        }
+        if !wrr_found {
+            eprintln!("Warning: No WRR record found in file");
+        }
+        if !mrr_found {
+            eprintln!("Warning: No MRR record found in file");
+        }
+        
+        Ok(())
+    }
+
+    /// Dump records from an STDF file, optionally filtering by record types
+    pub fn dump_file<P: AsRef<Path>>(&self, path: P, record_types: &[String]) -> Result<(), Error> {
+        let iter = StdfRecordIterator::new(path)?;
+        let endian = iter.endian();
+        let dump_all = record_types.is_empty();
+        
+        for result in iter {
+            let record_bytes = result?;
+            let record_name = record_type(&record_bytes)?;
+            
+            if dump_all || record_types.contains(&record_name.to_string()) {
+                let v4 = parse_record(&record_bytes, endian)?;
+                println!("{}", v4);
+            }
+        }
+        
+        Ok(())
+    }
+}
+
+/// Iterator that yields raw STDF records (including header) as byte slices
+pub struct StdfRecordIterator {
+    buffer: Vec<u8>,
+    offset: usize,
+    endian: byte::ctx::Endian,
+}
+
+impl StdfRecordIterator {
+    /// Create a new iterator from a file path
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let buffer = StdfParser::read_file_content(path)?;
+        let endian = Header::detect_endian(&buffer)
+            .map_err(|e| Error::new(ErrorKind::Other, format!("{:?}", e)))?;
+        
+        Ok(StdfRecordIterator {
+            buffer,
+            offset: 0,
+            endian,
+        })
+    }
+
+    /// Create a new iterator from a buffer
+    pub fn from_buffer(buffer: Vec<u8>) -> Result<Self, Error> {
+        let endian = Header::detect_endian(&buffer)
+            .map_err(|e| Error::new(ErrorKind::Other, format!("{:?}", e)))?;
+        
+        Ok(StdfRecordIterator {
+            buffer,
+            offset: 0,
+            endian,
+        })
+    }
+    
+    /// Get the endianness of the STDF file
+    pub fn endian(&self) -> byte::ctx::Endian {
+        self.endian
+    }
+}
+
+impl<'a> Iterator for StdfRecordIterator {
+    type Item = Result<Vec<u8>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset >= self.buffer.len() {
+            return None;
+        }
+
+        let start_offset = self.offset;
+        
+        // Read the header to get the record length
+        let header_result = self.buffer[..].read_with::<Header>(&mut self.offset, self.endian);
+        
+        match header_result {
+            Ok(header) => {
+                let record_length = header.rec_len.0 as usize;
+                let header_size = self.offset - start_offset;
+                let total_size = header_size + record_length;
+                
+                // Check if we have enough data
+                if start_offset + total_size > self.buffer.len() {
+                    return Some(Err(Error::new(
+                        ErrorKind::UnexpectedEof,
+                        format!("Incomplete record at offset {}", start_offset)
+                    )));
                 }
-                Err(e) => return Err(Error::new(ErrorKind::Other, format!("{:?}", e))),
-            };
+                
+                // Extract the complete record (header + data)
+                let record_bytes = self.buffer[start_offset..start_offset + total_size].to_vec();
+                
+                // Move offset past the data
+                self.offset = start_offset + total_size;
+                
+                Some(Ok(record_bytes))
+            },
+            Err(byte::Error::BadOffset(x)) => {
+                if x == self.buffer.len() {
+                    None  // End of file
+                } else {
+                    Some(Err(Error::new(
+                        ErrorKind::Other,
+                        format!("Bad offset {} before EOF", x)
+                    )))
+                }
+            },
+            Err(e) => Some(Err(Error::new(
+                ErrorKind::Other,
+                format!("Error reading header: {:?}", e)
+            ))),
+        }
+    }
+}
+
+/// Get the record type name from raw record bytes
+/// 
+/// # Arguments
+/// * `record_bytes` - Complete record including header (must be at least 4 bytes)
+/// 
+/// # Returns
+/// * `Ok(&str)` - The record type name (e.g., "FAR", "MIR", "PRR")
+/// * `Err(Error)` - If the record is too short
+/// 
+/// # Example
+/// ```no_run
+/// use stdf::{StdfRecordIterator, record_type};
+/// 
+/// let iter = StdfRecordIterator::new("test.std").unwrap();
+/// 
+/// for result in iter {
+///     let record_bytes = result.unwrap();
+///     let rec_type = record_type(&record_bytes).unwrap();
+///     println!("Record type: {}", rec_type);
+/// }
+/// ```
+pub fn record_type(record_bytes: &[u8]) -> Result<&'static str, Error> {
+    if record_bytes.len() < 4 {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            format!("Record too short: {} bytes (minimum 4)", record_bytes.len())
+        ));
+    }
+    
+    let rec_typ = record_bytes[2];
+    let rec_sub = record_bytes[3];
+    
+    Ok(match (rec_typ, rec_sub) {
+        (0, 10) => "FAR",
+        (0, 20) => "ATR",
+        (1, 10) => "MIR",
+        (1, 20) => "MRR",
+        (1, 30) => "PCR",
+        (1, 40) => "HBR",
+        (1, 50) => "SBR",
+        (1, 60) => "PMR",
+        (1, 62) => "PGR",
+        (1, 63) => "PLR",
+        (1, 70) => "RDR",
+        (1, 80) => "SDR",
+        (2, 10) => "WIR",
+        (2, 20) => "WRR",
+        (2, 30) => "WCR",
+        (5, 10) => "PIR",
+        (5, 20) => "PRR",
+        (10, 30) => "TSR",
+        (15, 10) => "PTR",
+        (15, 15) => "MPR",
+        (15, 20) => "FTR",
+        (20, 10) => "BPS",
+        (20, 20) => "EPS",
+        (50, 10) => "GDR",
+        (50, 30) => "DTR",
+        _ => "UNKNOWN",
+    })
+}
+
+/// Factory function to parse raw record bytes into a V4 record type
+/// 
+/// # Arguments
+/// * `record_bytes` - Complete record including header (must be at least 4 bytes)
+/// * `endian` - The endianness to use for parsing
+/// 
+/// # Returns
+/// * `Ok(V4)` - Successfully parsed record
+/// * `Err(Error)` - If the record cannot be parsed
+/// 
+/// # Example
+/// ```no_run
+/// use stdf::{StdfRecordIterator, parse_record};
+/// 
+/// let mut iter = StdfRecordIterator::new("test.std").unwrap();
+/// let endian = iter.endian();
+/// 
+/// for result in iter {
+///     let record_bytes = result.unwrap();
+///     let record = parse_record(&record_bytes, endian).unwrap();
+///     println!("{:?}", record);
+/// }
+/// ```
+pub fn parse_record(record_bytes: &[u8], endian: byte::ctx::Endian) -> Result<V4<'_>, Error> {
+    if record_bytes.len() < 4 {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            format!("Record too short: {} bytes (minimum 4)", record_bytes.len())
+        ));
+    }
+    
+    // Parse the record
+    let offset = &mut 0;
+    record_bytes.read_with::<V4>(offset, endian)
+        .map_err(|e| Error::new(ErrorKind::Other, format!("Parse error: {:?}", e)))
+}
+
+/// Validates an STDF file by checking if the last record has a valid length.
+/// Returns true if REC_LEN + 2 equals the actual record byte length, false otherwise.
+pub fn valid_file(filename: &str) -> Result<bool, Error> {
+    let iter = StdfRecordIterator::new(filename)?;
+    let mut last_record: Option<Vec<u8>> = None;
+    
+    for result in iter {
+        last_record = Some(result?);
+    }
+    
+    match last_record {
+        Some(record_bytes) => {
+            if record_bytes.len() < 2 {
+                return Ok(false);
+            }
+            
+            // Get REC_LEN from first two bytes (endianness doesn't matter for validation)
+            let rec_len = u16::from_le_bytes([record_bytes[0], record_bytes[1]]);
+            
+            // Check if REC_LEN + 2 equals the actual record length
+            Ok((rec_len as usize + 2) == record_bytes.len())
+        },
+        None => Ok(false), // Empty file
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use byte::ctx::Endian;
+
+    #[test]
+    fn parse_record_too_short() {
+        let bytes = vec![0x00, 0x01]; // Only 2 bytes, need at least 4
+        let result = parse_record(&bytes, Endian::Big);
+        assert!(result.is_err());
+        
+        let err = result.unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::InvalidData);
+        assert!(err.to_string().contains("too short"));
+    }
+
+    #[test]
+    fn parse_record_empty() {
+        let bytes = vec![];
+        let result = parse_record(&bytes, Endian::Big);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn parse_record_valid_far() {
+        // FAR: REC_LEN=2, REC_TYP=0, REC_SUB=10, cpu_type=2, stdf_ver=4
+        let bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
+        let result = parse_record(&bytes, Endian::Big);
+        assert!(result.is_ok());
+        
+        if let Ok(V4::FAR(far)) = result {
+            assert_eq!(far.cpu_type.0, 2);
+            assert_eq!(far.stdf_ver.0, 4);
+        } else {
+            panic!("Expected FAR record");
         }
     }
 
-    /// Iterate through records in an STDF file
-    pub fn dump_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        let f = File::open(path)?;
-        let m = unsafe { MmapOptions::new().map(&f)? };
-        let bytes = &m[..];
+    #[test]
+    fn parse_record_valid_pir() {
+        // PIR: REC_LEN=2, REC_TYP=5, REC_SUB=10, head_num=1, site_num=2
+        let bytes = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x02];
+        let result = parse_record(&bytes, Endian::Big);
+        assert!(result.is_ok());
         
-        let endian = Header::detect_endian(bytes)
-            .map_err(|x| Error::new(ErrorKind::Other, format!("{:?}", x)))?;
-        
-        let offset = &mut 0;
-        
-        loop {
-            match bytes.read_with::<V4>(offset, endian) {
-                Ok(v4) => println!("{:?}", v4),
-                Err(byte::Error::BadOffset(x)) => {
-                    if x == bytes.len() {
-                        return Ok(());
-                    } else {
-                        return Err(Error::new(
-                            ErrorKind::Other,
-                            format!("bad offset {} before EOF", x),
-                        ));
-                    }
-                }
-                Err(e) => return Err(Error::new(ErrorKind::Other, format!("{:?}", e))),
-            };
+        if let Ok(V4::PIR(pir)) = result {
+            assert_eq!(pir.head_num.0, 1);
+            assert_eq!(pir.site_num.0, 2);
+        } else {
+            panic!("Expected PIR record");
         }
+    }
+
+    #[test]
+    fn parse_record_respects_endianness() {
+        // Little endian FAR
+        let le_bytes = vec![0x02, 0x00, 0x00, 0x0A, 0x02, 0x04];
+        let le_result = parse_record(&le_bytes, Endian::Little);
+        assert!(le_result.is_ok());
+        
+        // Big endian FAR
+        let be_bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
+        let be_result = parse_record(&be_bytes, Endian::Big);
+        assert!(be_result.is_ok());
+        
+        // Both should parse to the same values
+        if let (Ok(V4::FAR(le_far)), Ok(V4::FAR(be_far))) = (le_result, be_result) {
+            assert_eq!(le_far.cpu_type.0, be_far.cpu_type.0);
+            assert_eq!(le_far.stdf_ver.0, be_far.stdf_ver.0);
+        } else {
+            panic!("Expected FAR records");
+        }
+    }
+
+    #[test]
+    fn record_type_far() {
+        let bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
+        let result = record_type(&bytes);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "FAR");
+    }
+
+    #[test]
+    fn record_type_pir() {
+        let bytes = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x02];
+        let result = record_type(&bytes);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "PIR");
+    }
+
+    #[test]
+    fn record_type_unknown() {
+        let bytes = vec![0x00, 0x02, 0xFF, 0xFF, 0x00, 0x00];
+        let result = record_type(&bytes);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "UNKNOWN");
+    }
+
+    #[test]
+    fn record_type_too_short() {
+        let bytes = vec![0x00, 0x02];
+        let result = record_type(&bytes);
+        assert!(result.is_err());
     }
 }

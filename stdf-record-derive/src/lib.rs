@@ -54,9 +54,33 @@ fn array_type_attr(f: &syn::Field) -> Option<Array> {
     None
 }
 
+fn record_type_attr(attrs: &[syn::Attribute]) -> Option<(u8, u8)> {
+    for attr in attrs {
+        if attr_name(&attr.path()) == "record_type" {
+            if let Ok(args) = attr.parse_args::<syn::LitInt>() {
+                if let Ok(val) = args.base10_parse::<u8>() {
+                    // Single value means both typ and sub are the same
+                    return Some((val, val));
+                }
+            }
+            // Try parsing as tuple (typ, sub)
+            if let Ok(meta_list) = attr.meta.require_list() {
+                let tokens = meta_list.tokens.to_string();
+                let parts: Vec<&str> = tokens.split(',').map(|s| s.trim()).collect();
+                if parts.len() == 2 {
+                    if let (Ok(typ), Ok(sub)) = (parts[0].parse::<u8>(), parts[1].parse::<u8>()) {
+                        return Some((typ, sub));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 #[proc_macro_derive(
     STDFRecord,
-    attributes(default, array_length, nibble_array_length, array_type)
+    attributes(default, array_length, nibble_array_length, array_type, record_type)
 )]
 pub fn stdf_record(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
@@ -201,8 +225,75 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
             }
         }
     };
+    
+    let binary_fields = record_struct.fields.iter().map(|ref x| {
+        let name = x.ident.as_ref().unwrap();
+        match (array_length_attr(x), array_type_attr(x).as_ref()) {
+            (_, Some(Array::OfType(_))) => quote! {
+                for v in &self.#name {
+                    data.extend_from_slice(&v.binary(endian));
+                }
+            },
+            (Some(_), Some(Array::Nibble)) => quote! {
+                {
+                    let mut i = 0;
+                    while i < self.#name.len() {
+                        let mut byteval = self.#name[i].0 & 0xf;
+                        i += 1;
+                        if i < self.#name.len() {
+                            byteval |= (self.#name[i].0 << 4);
+                            i += 1;
+                        }
+                        data.push(byteval);
+                    }
+                }
+            },
+            (_, _) => quote! {
+                data.extend_from_slice(&self.#name.binary(endian));
+            },
+        }
+    });
+    
+    let record_type_values = record_type_attr(&derive_input.attrs);
+    let binary_impl = if let Some((rec_typ, rec_sub)) = record_type_values {
+        quote! {
+            impl #impl_generics #name #ty_generics #where_clause {
+                pub fn binary(&self, endian: ctx::Endian) -> Vec<u8> {
+                    let mut data = Vec::new();
+                    #(#binary_fields)*
+                    
+                    // Calculate REC_LEN (length of data only, not including the 4-byte header)
+                    let rec_len = data.len() as u16;
+                    
+                    // Build complete record with header
+                    let mut bytes = Vec::with_capacity(4 + data.len());
+                    bytes.extend_from_slice(&rec_len.to_le_bytes());  // REC_LEN is always little-endian in header
+                    if endian == ctx::Endian::Big {
+                        bytes[0] = (rec_len >> 8) as u8;
+                        bytes[1] = (rec_len & 0xff) as u8;
+                    }
+                    bytes.push(#rec_typ);  // REC_TYP
+                    bytes.push(#rec_sub);  // REC_SUB
+                    bytes.extend_from_slice(&data);
+                    bytes
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl #impl_generics #name #ty_generics #where_clause {
+                pub fn binary(&self, endian: ctx::Endian) -> Vec<u8> {
+                    let mut bytes = Vec::new();
+                    #(#binary_fields)*
+                    bytes
+                }
+            }
+        }
+    };
+    
     TokenStream::from(quote! {
         #try_read
         #try_write
+        #binary_impl
     })
 }
