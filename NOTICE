@@ -1,0 +1,17 @@
+Semi-ATE STDF
+Copyright (c) 2025 Semi-ATE
+
+This project is built upon and inspired by the cmars/stdf project:
+Copyright (c) 2018 Casey Marshall
+Licensed under the Apache License, Version 2.0
+https://github.com/cmars/stdf
+
+The Semi-ATE STDF implementation represents a significant rewrite with:
+- New CLI tool with comprehensive command set
+- Enhanced parsing capabilities and iterators
+- Python bindings via PyO3
+- Additional data export formats
+- Cross-platform packaging and distribution
+
+While inspired by the original cmars/stdf architecture, this implementation
+includes substantial modifications, new features, and different design choices.
