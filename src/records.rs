@@ -80,6 +80,18 @@ impl Header {
             })
         }
     }
+    
+    pub fn detect_endian_from_file<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<ctx::Endian> {
+        use std::io::{Error, ErrorKind, Read};
+        use std::fs::File;
+        
+        let mut file = File::open(path)?;
+        let mut buffer = vec![0u8; 6]; // FAR record is 6 bytes
+        file.read_exact(&mut buffer)?;
+        
+        Self::detect_endian(&buffer)
+            .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Failed to detect endianness: {:?}", e)))
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]

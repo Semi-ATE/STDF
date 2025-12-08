@@ -10,10 +10,10 @@ pub mod writer;
 pub use records::{Header, V4};
 pub use types::*;
 pub use parsers::{
-    StdfParser, StdfRecordIterator, AtdfRecordIterator,
+    StdfParser, StdfRecordIterator, StdfRecordFPIterator, AtdfRecordIterator,
     stdf_parse_record, stdf_record_type, 
     atdf_parse_record, atdf_record_type,
-    valid_file
+    valid_file, extract_part_records
 };
 
 // Python bindings (when feature is enabled)

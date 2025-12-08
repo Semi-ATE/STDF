@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{Error, ErrorKind, Read};
+use std::io::{Error, ErrorKind, Read, Seek, SeekFrom};
 use std::path::Path;
 
 extern crate byte;
@@ -118,6 +118,106 @@ impl StdfParser {
     }
 }
 
+/// Extract part records (PIR through PRR) for a specific part
+/// 
+/// Given a PIR record and its file position, reads all test records (PTR, FTR, MPR)
+/// and the PRR that belong to the same part (matching HEAD_NUM and SITE_NUM).
+/// 
+/// Returns the raw bytes of all matching records.
+/// 
+/// # Arguments
+/// * `filename` - Path to the STDF file
+/// * `pir_bytes` - Raw bytes of the PIR record
+/// * `file_pointer` - File offset immediately after the PIR record
+/// * `endian` - Endianness of the file (from iterator or FAR record)
+/// 
+/// # Returns
+/// * `Ok(Vec<Vec<u8>>)` - Vector of raw record bytes (PIR, test records, PRR)
+/// * `Err(Error)` - If file operations fail or parsing fails
+/// 
+/// # Example
+/// ```no_run
+/// use stdf::{extract_part_records, StdfRecordFPIterator, stdf_parse_record};
+/// 
+/// let mut iter = StdfRecordFPIterator::new("test.std").unwrap();
+/// let endian = iter.endian();
+/// 
+/// for result in iter {
+///     let (record_bytes, fp) = result.unwrap();
+///     if let Ok(rec) = stdf_parse_record(&record_bytes, endian) {
+///         if let stdf::V4::PIR(_) = rec {
+///             let part_bytes = extract_part_records("test.std", &record_bytes, fp, endian).unwrap();
+///             println!("Part has {} records", part_bytes.len());
+///             // Parse each record as needed
+///             for bytes in &part_bytes {
+///                 let record = stdf_parse_record(bytes, endian).unwrap();
+///                 println!("{}", record);
+///             }
+///             break;
+///         }
+///     }
+/// }
+/// ```
+pub fn extract_part_records<P: AsRef<Path>>(
+    filename: P,
+    pir_bytes: &[u8],
+    file_pointer: usize,
+    endian: byte::ctx::Endian,
+) -> Result<Vec<Vec<u8>>, Error> {
+    
+    // Parse the PIR to get HEAD_NUM and SITE_NUM
+    let pir_record = stdf_parse_record(pir_bytes, endian)?;
+    
+    let (head_num, site_num) = match &pir_record {
+        V4::PIR(pir) => (pir.head_num.0, pir.site_num.0),
+        _ => {
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                "Expected PIR record"
+            ));
+        }
+    };
+    
+    // Initialize result vector with the PIR bytes
+    let mut record_bytes_vec = vec![pir_bytes.to_vec()];
+    
+    // Open file and seek to the position after PIR
+    let mut file = File::open(filename)?;
+    file.seek(SeekFrom::Start(file_pointer as u64))?;
+    
+    // Read remaining file content from this position
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    
+    // Create iterator from the buffer with known endianness
+    let iter = StdfRecordIterator::from_buffer_with_endian(buffer, endian);
+    
+    // Process records until we find matching PRR
+    for result in iter {
+        let record_bytes = result?;
+        let record = stdf_parse_record(&record_bytes, endian)?;
+        
+        let (matches, is_prr) = match &record {
+            V4::PTR(ptr) => (ptr.head_num.0 == head_num && ptr.site_num.0 == site_num, false),
+            V4::FTR(ftr) => (ftr.head_num.0 == head_num && ftr.site_num.0 == site_num, false),
+            V4::MPR(mpr) => (mpr.head_num.0 == head_num && mpr.site_num.0 == site_num, false),
+            V4::PRR(prr) => (prr.head_num.0 == head_num && prr.site_num.0 == site_num, true),
+            _ => (false, false),
+        };
+        
+        if matches {
+            record_bytes_vec.push(record_bytes);
+            
+            // Check if this was the PRR - if so, we're done
+            if is_prr {
+                break;
+            }
+        }
+    }
+    
+    Ok(record_bytes_vec)
+}
+
 /// Iterator that yields raw STDF records (including header) as byte slices
 pub struct StdfRecordIterator {
     buffer: Vec<u8>,
@@ -149,6 +249,15 @@ impl StdfRecordIterator {
             offset: 0,
             endian,
         })
+    }
+    
+    /// Create a new iterator from a buffer with known endianness
+    pub fn from_buffer_with_endian(buffer: Vec<u8>, endian: byte::ctx::Endian) -> Self {
+        StdfRecordIterator {
+            buffer,
+            offset: 0,
+            endian,
+        }
     }
     
     /// Get the endianness of the STDF file
@@ -191,6 +300,100 @@ impl<'a> Iterator for StdfRecordIterator {
                 self.offset = start_offset + total_size;
                 
                 Some(Ok(record_bytes))
+            },
+            Err(byte::Error::BadOffset(x)) => {
+                if x == self.buffer.len() {
+                    None  // End of file
+                } else {
+                    Some(Err(Error::new(
+                        ErrorKind::Other,
+                        format!("Bad offset {} before EOF", x)
+                    )))
+                }
+            },
+            Err(e) => Some(Err(Error::new(
+                ErrorKind::Other,
+                format!("Error reading header: {:?}", e)
+            ))),
+        }
+    }
+}
+
+/// Iterator that yields raw STDF records with file pointers
+/// Returns tuple of (record bytes, file pointer after record)
+pub struct StdfRecordFPIterator {
+    buffer: Vec<u8>,
+    offset: usize,
+    endian: byte::ctx::Endian,
+}
+
+impl StdfRecordFPIterator {
+    /// Create a new iterator from a file path
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let buffer = StdfParser::read_file_content(path)?;
+        let endian = Header::detect_endian(&buffer)
+            .map_err(|e| Error::new(ErrorKind::Other, format!("{:?}", e)))?;
+        
+        Ok(StdfRecordFPIterator {
+            buffer,
+            offset: 0,
+            endian,
+        })
+    }
+
+    /// Create a new iterator from a buffer
+    pub fn from_buffer(buffer: Vec<u8>) -> Result<Self, Error> {
+        let endian = Header::detect_endian(&buffer)
+            .map_err(|e| Error::new(ErrorKind::Other, format!("{:?}", e)))?;
+        
+        Ok(StdfRecordFPIterator {
+            buffer,
+            offset: 0,
+            endian,
+        })
+    }
+    
+    /// Get the endianness of the STDF file
+    pub fn endian(&self) -> byte::ctx::Endian {
+        self.endian
+    }
+}
+
+impl<'a> Iterator for StdfRecordFPIterator {
+    type Item = Result<(Vec<u8>, usize), Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset >= self.buffer.len() {
+            return None;
+        }
+
+        let start_offset = self.offset;
+        
+        // Read the header to get the record length
+        let header_result = self.buffer[..].read_with::<Header>(&mut self.offset, self.endian);
+        
+        match header_result {
+            Ok(header) => {
+                let record_length = header.rec_len.0 as usize;
+                let header_size = self.offset - start_offset;
+                let total_size = header_size + record_length;
+                
+                // Check if we have enough data
+                if start_offset + total_size > self.buffer.len() {
+                    return Some(Err(Error::new(
+                        ErrorKind::UnexpectedEof,
+                        format!("Incomplete record at offset {}", start_offset)
+                    )));
+                }
+                
+                // Extract the complete record (header + data)
+                let record_bytes = self.buffer[start_offset..start_offset + total_size].to_vec();
+                
+                // Move offset past the data
+                self.offset = start_offset + total_size;
+                
+                // Return record and file pointer after the record
+                Some(Ok((record_bytes, self.offset)))
             },
             Err(byte::Error::BadOffset(x)) => {
                 if x == self.buffer.len() {
@@ -479,6 +682,90 @@ mod tests {
         let result = stdf_record_type(&bytes);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "FAR");
+    }
+
+    #[test]
+    fn stdf_record_fp_iterator_basic() {
+        // Create a buffer with two records: FAR and PIR
+        // FAR: REC_LEN=2, REC_TYP=0, REC_SUB=10, cpu_type=2, stdf_ver=4
+        let far_bytes = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
+        // PIR: REC_LEN=2, REC_TYP=5, REC_SUB=10, head_num=1, site_num=2
+        let pir_bytes = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x02];
+        
+        let mut buffer = Vec::new();
+        buffer.extend_from_slice(&far_bytes);
+        buffer.extend_from_slice(&pir_bytes);
+        
+        let mut iter = StdfRecordFPIterator::from_buffer(buffer).expect("Failed to create iterator");
+        
+        // First record should be FAR at offset 0, ending at 6
+        let first = iter.next().expect("Should have first record");
+        assert!(first.is_ok());
+        let (record1, fp1) = first.unwrap();
+        assert_eq!(record1.len(), 6);
+        assert_eq!(fp1, 6); // File pointer after FAR record
+        assert_eq!(record1[2], 0x00); // REC_TYP = 0 (FAR)
+        assert_eq!(record1[3], 0x0A); // REC_SUB = 10
+        
+        // Second record should be PIR at offset 6, ending at 12
+        let second = iter.next().expect("Should have second record");
+        assert!(second.is_ok());
+        let (record2, fp2) = second.unwrap();
+        assert_eq!(record2.len(), 6);
+        assert_eq!(fp2, 12); // File pointer after PIR record
+        assert_eq!(record2[2], 0x05); // REC_TYP = 5 (PIR)
+        assert_eq!(record2[3], 0x0A); // REC_SUB = 10
+        
+        // Should be no more records
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn stdf_record_fp_iterator_file_pointers_sequential() {
+        // Create buffer with three different-sized records
+        // FAR: 6 bytes total
+        let far = vec![0x00, 0x02, 0x00, 0x0A, 0x02, 0x04];
+        // PIR: 6 bytes total
+        let pir = vec![0x00, 0x02, 0x05, 0x0A, 0x01, 0x02];
+        // MRR: REC_LEN=8, REC_TYP=1, REC_SUB=20 + 8 data bytes = 12 bytes total
+        let mrr = vec![0x00, 0x08, 0x01, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        
+        let mut buffer = Vec::new();
+        buffer.extend_from_slice(&far);
+        buffer.extend_from_slice(&pir);
+        buffer.extend_from_slice(&mrr);
+        
+        let mut iter = StdfRecordFPIterator::from_buffer(buffer).expect("Failed to create iterator");
+        
+        let mut last_fp = 0;
+        let expected_fps = vec![6, 12, 24];
+        let mut count = 0;
+        
+        for (idx, result) in iter.enumerate() {
+            assert!(result.is_ok());
+            let (_, fp) = result.unwrap();
+            assert!(fp > last_fp, "File pointer should increase");
+            assert_eq!(fp, expected_fps[idx], "File pointer mismatch at record {}", idx);
+            last_fp = fp;
+            count += 1;
+        }
+        
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn stdf_record_fp_iterator_endianness() {
+        // Little endian FAR
+        let le_far = vec![0x02, 0x00, 0x00, 0x0A, 0x02, 0x04];
+        
+        let mut iter = StdfRecordFPIterator::from_buffer(le_far.clone()).expect("Failed to create iterator");
+        assert_eq!(iter.endian(), Endian::Little);
+        
+        let result = iter.next().expect("Should have record");
+        assert!(result.is_ok());
+        let (record, fp) = result.unwrap();
+        assert_eq!(record.len(), 6);
+        assert_eq!(fp, 6);
     }
 
     #[test]

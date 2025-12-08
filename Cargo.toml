@@ -29,6 +29,9 @@ stdf-record-derive = { path = "stdf-record-derive", version = "0.2" }
 flate2 = "1.0"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 indicatif = "0.17"
+infer = "0.16"
+polars = { version = "0.44", features = ["parquet", "lazy"] }
+rust_xlsxwriter = "0.68"
 
 [features]
 default = []
