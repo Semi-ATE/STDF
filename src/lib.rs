@@ -4,7 +4,13 @@ extern crate stdf_record_derive;
 pub mod types;
 pub mod records;
 pub mod parsers;
-pub mod writer;
+pub mod writers;
+
+// Visualization modules
+pub mod models;
+pub mod statistics;
+pub mod charts;
+pub mod export;
 
 // Re-export commonly used types
 pub use records::{Header, V4};

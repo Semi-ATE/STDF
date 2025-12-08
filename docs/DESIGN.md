@@ -1,14 +1,20 @@
-# DESIGN.md - STDF Parser Architecture & Implementation
+# STDF - Design Document
 
 ## Project Overview
 
-**semi-ate-stdf** is a high-performance Standard Test Data Format (STDF) parser and manipulation tool written in Rust with Python bindings. STDF is the industry-standard file format used by semiconductor Automatic Test Equipment (ATE) to log test program data.
+**Semi-ATE-STDF** is a comprehensive Rust-based toolkit for semiconductor test data in STDF (Standard Test Data Format). It combines high-performance parsing with advanced visualization and reporting capabilities.
 
-**Key Design Goals:**
-- Maximum performance through Rust and memory-mapped I/O
-- Comprehensive CLI tool for STDF file operations
-- Python bindings for integration with data analysis workflows
-- Support for multiple output formats (ATDF, XLSX, HDF5)
+**Key Features:**
+- Maximum performance STDF parser (memory-mapped I/O, ~900 MB/s)
+- PDF report generation with embedded charts
+- Excel export with rich formatting
+- Python bindings for data analysis workflows
+- CLI tools for STDF file operations
+- Multi-file lot-level analysis with Parquet caching
+
+---
+
+# Part 1: STDF Parser
 
 ## Architecture
 
@@ -22,7 +28,10 @@
   - `types`: STDF data types (U1, I2, C*n, etc.)
   - `records`: STDF V4 record definitions
   - `parsers`: File parsing logic
-  - `writer`: STDF writing capabilities
+  - `writers`: Multi-format output (STDF, PDF, Excel, Parquet)
+  - `models`: Data structures for visualization
+  - `statistics`: Statistical calculations (Cp, CpK)
+  - `charts`: Chart generation with plotters
 
 #### 2. **records.rs** - Record Definitions
 - Defines all STDF V4 record types as Rust structs
@@ -39,7 +48,7 @@
 - `StdfRecordFPIterator`: Iterator over STDF records with file pointers (returns tuple of bytes + offset)
   - **Performance**: Identical to `StdfRecordIterator` (~906 MB/s on 3GB files)
   - **Zero overhead**: File pointer is already tracked internally for iteration
-  - **Recommendation**: Use `StdfRecordFPIterator` for all new code; deprecate `StdfRecordIterator`
+  - **Recommendation**: Use `StdfRecordFPIterator` for all new code
 - `stdf_parse_record()`: Parses individual records from byte slices
 - `valid_file()`: Validates STDF file structure (starts with FAR, ends with MRR)
 - Handles both little-endian and big-endian files
@@ -60,14 +69,8 @@
 - Generates parsing code for all record types
 - Implements `Display` trait for ATDF conversion
 - Generates `ascii()` method returning pipe-delimited fields
-- **Recent fix:** Changed from append-based to join-based field concatenation to eliminate trailing pipes
 
-#### 6. **main.rs (stdf.rs)** - CLI Application
-- Command-line interface for STDF operations
-- Built with clap for argument parsing
-- Supports multiple subcommands (see Commands section)
-
-### Data Flow
+### Data Flow (Parsing)
 
 ```
 STDF File (binary)
@@ -93,471 +96,676 @@ stdf count records <file>
 ```
 - Counts total records in file
 - Performance: ~3.6s for 3GB file (86M records)
-- Returns count as stdout
 
 #### **tally records** ✅
 ```bash
 stdf tally records <file>
 ```
 - Counts each record type individually
-- Uses HashMap for aggregation
 - Output sorted by count descending
-- Example:
-  ```
-  PTR: 41234567
-  FTR: 12345678
-  PIR: 8765432
-  ...
-  ```
 
 #### **dump** ✅
 ```bash
 stdf dump <file> [--record-type <type>]
 ```
 - Dumps records in human-readable format
-- Optional filtering by record type (e.g., `--record-type MIR`)
-- Shows each record's fields and values
+- Optional filtering by record type
 
 #### **is** Commands ✅
 Boolean validation commands returning exit codes:
 - `is ft <file>`: Check if Final Test (TEST_COD='F')
 - `is ws <file>`: Check if Wafer Sort (TEST_COD='W')
-- `is hot <file>`: Check temperature conditions (>100°C or "H"/"HOT")
-- `is cold <file>`: Check cold conditions (<0°C or "C"/"COLD")
-- `is room <file>`: Check room temp (20-30°C or "R"/"ROOM")
-- `is truncated <file>`: Check if file is incomplete (corrupted/truncated)
-- `is complete <file>`: Check if file ends with MRR record
+- `is hot/cold/room <file>`: Check temperature conditions
+- `is truncated/complete <file>`: Check file integrity
 
-**Exit codes:** `0`=success/true, `1`=false/not found, `2`=error
-
-**Cross-shell compatibility:** Exit codes work identically across all platforms and shells:
-- Windows: PowerShell (`$LASTEXITCODE`), CMD (`%ERRORLEVEL%`)
-- Linux/macOS: bash/zsh/fish/sh (`$?`)
+**Exit codes:** `0`=true, `1`=false, `2`=error
 
 #### **endian** ✅
 ```bash
 stdf endian <file>
 ```
-- Returns "LE" or "BE" based on FAR record's CPU_TYPE field
+- Returns "LE" or "BE" based on FAR record
 
 #### **lot** ✅
 ```bash
 stdf lot <file>
 ```
-- Extracts LOT_ID from MIR (Master Information Record)
+- Extracts LOT_ID from MIR
 
 #### **tester** ✅
 ```bash
 stdf tester <file>
 stdf tester type <file>
 ```
-- `tester`: Returns NODE_NAM (tester name) from MIR
-- `tester type`: Returns TSTR_TYP (tester type) from MIR
+- Returns tester name and type from MIR
 
 #### **temperature** ✅
 ```bash
-stdf temperature <file>
-stdf temperature <file> int
+stdf temperature <file> [int]
 ```
-- Default: Returns raw TEMP_TXT string from MIR
-- With `int`: Intelligent parsing to integer Celsius
-  - Special cases:
-    - `R`/`ROOM` → 25°C
-    - `C`/`COLD` → -40°C
-    - `H`/`HOT` → 150°C
-  - Handles suffixes: "25C", "170F" (converts F→C)
-  - Parses numeric strings: "+25", "85"
+- Returns temperature with intelligent parsing
 
 #### **to atdf** ✅
 ```bash
 stdf to atdf <file>
 ```
 - Converts STDF to ASCII Test Data Format
-- Pipe-delimited fields
-- **Recent fix:** Removed trailing pipe from each record
 
-### Stubbed Commands (Not Yet Implemented)
+### Future Commands
 
-#### **count** Subcommands
-- `count parts <file>`: Total parts tested
-- `count parts unique <file>`: Unique parts (excluding retests)
-- `count sbins <file>`: Number of soft bins
-- `count hbins <file>`: Number of hard bins
+#### **export** 🔄 (In Development)
+```bash
+stdf export pdf <input.stdf> <output.pdf>
+stdf export xlsx <input.stdf> <output.xlsx>
+stdf export parquet <input.stdf> <output.parquet>
+stdf export all <input.stdf> <output-prefix>
+```
 
-#### **tally** Subcommands
-- `tally heads <file>`: Tally by test head
-- `tally sites <file>`: Tally by site
-- `tally hbins <file>`: Tally by hard bin
-- `tally sbins <file>`: Tally by soft bin
-
-#### **to** Conversion Commands
-- `to xlsx <file>`: Convert to Excel format
-- `to hdf5 <file>`: Convert to HDF5 format
-
-## Key Implementation Details
-
-### Performance Optimizations
+## Performance Optimizations
 
 1. **Memory-Mapped I/O**: Uses `memmap2` for zero-copy file access
-   - 3GB files parsed in ~3.6 seconds
-   - ~822 MB/s throughput
+   - 3GB files parsed in ~3.6 seconds (~900 MB/s throughput)
    
 2. **Lazy Parsing**: Iterator pattern avoids loading entire file
    - Memory usage independent of file size
-   - Early exit for single-record queries
-
+   
 3. **Zero-Copy Parsing**: `byte` crate enables in-place deserialization
-   - No intermediate allocations for fixed-size types
-   - Minimal string copying
 
-### Special Parsing Logic
+## Compression Support
 
-#### Temperature Parsing (`parse_temperature_as_int`)
-```rust
-fn parse_temperature_as_int(temp_str: &str) -> Option<i32>
-```
-Handles diverse temperature formats:
-- Normalized strings: "R"/"ROOM" → 25, "C"/"COLD" → -40, "H"/"HOT" → 150
-- Suffix handling: "25C" → 25, "170F" → 76 (converts F→C)
-- Plain integers: "+25" → 25, "85" → 85
-- Formula: `(F - 32) * 5 / 9` for Fahrenheit conversion
+Supported formats with streaming decompression:
+- **gzip/zlib** (`.gz`, `.z`) - Most compatible
+- **bzip2** (`.bz2`) - Better compression
+- **xz/LZMA** (`.xz`) - Excellent ratio
+- **zstd** (`.zst`) - **RECOMMENDED** - Best speed/ratio balance
+- **lz4** (`.lz4`) - Fastest decompression
+- **zip** (`.zip`) - Archive format
+- **tar** (`.tar.*`) - Combined archives
 
-#### ATDF Generation
-Uses procedural macro to generate `ascii()` method:
-- Collects all fields into Vec<String>
-- Joins with "|" separator (no trailing pipe)
-- Handles optional fields (empty string if None)
-- Array fields: placeholder "[array]" (future enhancement)
-
-### Error Handling
-
-- **File I/O errors**: Propagated to caller with context
-- **Parse errors**: Graceful handling with error messages
-- **Validation failures**: Exit code 1 for boolean checks, stderr messages
-- **Truncated files**: Detected via parse errors during iteration
-
-## Testing
-
-### Test Files
-Located in `data/` directory:
-- Production STDF files (1-3GB each)
-- Various ATE vendors and test types
-- Known issue: `3xjxnh04.std` is corrupted (doesn't start with FAR)
-
-### Test Strategy
-1. Unit tests for individual parsers (60 tests passing)
-2. Integration tests with real STDF files
-3. Performance benchmarks on large files
-
-### Missing Test Coverage
-- No truncated file samples (TODO: create test files)
-- No incomplete file samples (TODO: create file without MRR)
-- Array field handling not fully tested
-
-## Python Integration
-
-### Current State
-- Python bindings scaffolded via PyO3
-- Placeholder functions (`add`, `multiply`) for testing
-- Full API not yet exposed to Python
-
-### Future Python API
-```python
-import stdf
-
-# Parser
-parser = stdf.Parser("test.stdf")
-for record in parser:
-    print(record.type, record.fields)
-
-# High-level operations
-info = stdf.info("test.stdf")
-df = stdf.to_dataframe("test.stdf")  # Pandas DataFrame
-```
-
-## Build & Distribution
-
-### Rust
-- Cargo workspace with main crate + procedural macro
-- Target: Windows, Linux, macOS
-
-### Python
-- Maturin for building wheels
-- PyPI distribution: `Semi-ATE-stdf`
-- Conda distribution: `semi-ate-stdf` (conda-forge)
-
-### Native Installers
-- Windows: WiX-based MSI installer
-- Linux: Debian packages (.deb)
-
-## Dependencies
-
-### Core Dependencies
-- `memmap2 ^0.9`: Memory-mapped file I/O
-- `byte ^0.2`: Binary parsing with endianness
-- `clap ^4.5`: CLI argument parsing
-- `indicatif ^0.17`: Progress bars (not yet used)
-
-### Python Dependencies
-- `pyo3 ^0.23`: Rust-Python bindings
-- `maturin ^1.7`: Wheel building
-
-### Development Environment
-- Conda environment: `Semi-ATE-STDF-dev`
-- Python 3.13
-- `py7zr`: For test data compression
-
-## Recent Changes (Session Log)
-
-### Commit 2a51179 (2024-12-08)
-**Summary:** Implemented tally records, tester commands, and various improvements
-
-1. **ATDF Fix**: Removed trailing pipe from ascii() output
-   - Changed from append-based to join-based field concatenation
-   - File: `stdf-record-derive/src/lib.rs`
-
-2. **Tally Records**: Full implementation
-   - HashMap-based counting of each record type
-   - Sorted output by count descending
-   - File: `src/stdf.rs`
-
-3. **Tester Commands**: 
-   - `stdf tester`: Extract NODE_NAM from MIR
-   - `stdf tester type`: Extract TSTR_TYP from MIR
-   - File: `src/stdf.rs`
-
-4. **Temperature Parsing**: Intelligent int conversion
-   - Special case handling (R/ROOM, C/COLD, H/HOT)
-   - Fahrenheit to Celsius conversion
-   - Suffix parsing (25C, 170F)
-   - File: `src/stdf.rs`
-
-5. **Validation Commands**: is hot/cold/room/truncated/complete
-   - Exit code-based boolean returns
-   - File: `src/stdf.rs`
-
-6. **Infrastructure**:
-   - Added TODO.md for feature tracking
-   - Added environment.yml for Python dev setup
-   - Added scripts/decompress_data.py for test data management
-   - Updated .gitignore and Cargo.toml
-
-**Stats**: 7 files changed, 806 insertions(+), 66 deletions(-)
-
-## Future Roadmap
-
-### Priority 1: Complete Command Implementation
-- Implement all count/tally subcommands
-- Add xlsx/hdf5 conversion
-- Create test files for validation commands
-
-### Priority 2: Python API
-- Expose full parser API to Python
-- Add high-level convenience functions
-- Pandas DataFrame conversion
-
-### Priority 3: Performance
-- Parallel parsing for multi-core systems
-- Streaming output for large conversions
-- Progress bars for long operations
-
-### Priority 4: Features
-- STDF writing from other formats
-- Filtering/transformation operations
-- Statistical analysis commands
-
-## Design Patterns
-
-### Iterator Pattern
-All parsing uses Rust iterators for lazy evaluation:
-```rust
-for record in parser.iter() {
-    // Process one record at a time
-}
-```
-
-### Type Safety
-STDF's weakly-typed binary format mapped to strongly-typed Rust:
-```rust
-enum V4 {
-    MIR(MIR),  // Master Information Record
-    PIR(PIR),  // Part Information Record
-    PTR(PTR),  // Parametric Test Record
-    // ... 60+ record types
-}
-```
-
-### Procedural Macros
-Code generation for repetitive parsing logic:
-```rust
-#[derive(StdfRecord)]
-#[stdf(typ = 1, sub = 10)]
-struct MIR {
-    setup_t: U4,
-    start_t: U4,
-    // ... 30+ fields
-}
-// Generates: parsing, Display, ascii() method
-```
+Format detection via `infer` crate (magic bytes, not extension).
 
 ## Columnar Data Export
 
 ### Polars & Parquet
 
-**Strategy**: Use **polars** DataFrames for columnar data representation and export to **Parquet** format.
+**Strategy**: Use **polars** DataFrames for columnar representation and **Parquet** export.
 
-**Rationale:**
-- **polars**: High-performance DataFrame library built on Apache Arrow
-  - Native Rust implementation (no FFI overhead)
-  - Lazy evaluation for memory efficiency
-  - Built-in Parquet writer
-  - Rich DataFrame API for transformations and aggregations
-  - Python interoperability (polars-python)
-
-- **Parquet**: Columnar storage format ideal for STDF data
-  - Efficient compression (typical 10-20x reduction)
-  - Fast columnar queries (e.g., "get all results for test 1234")
-  - Schema preservation with strong typing
-  - Wide ecosystem support (Python pandas, DuckDB, Spark, Arrow, etc.)
-  - Industry standard for analytical workloads
-
-**Usage Pattern:**
-```rust
-use polars::prelude::*;
-
-let df = DataFrame::new(vec![
-    Series::new("test_num", test_nums),
-    Series::new("result", results),
-    Series::new("part_id", part_ids),
-])?;
-
-df.write_parquet("output.parquet", ParquetWriter::default())?;
-```
-
-**Benefits for STDF:**
-- Efficient storage of millions of test results
-- Fast filtering and aggregation queries
-- Easy integration with data analysis pipelines
-- Natural fit for test data (test parameters as columns, parts as rows)
+**Benefits:**
+- High-performance native Rust DataFrame library
+- Efficient compression (10-20x reduction)
+- Fast columnar queries
+- Wide ecosystem support
+- Natural fit for test data (tests as columns, parts as rows)
 
 ### Excel (XLSX) Export
 
-**Two-tier strategy** for Excel file generation:
+**Two-tier strategy:**
+1. **Simple exports**: polars' built-in Excel writer
+2. **Advanced exports**: **rust_xlsxwriter** for rich formatting
 
-1. **Simple exports**: Use polars' built-in Excel writer
-   - Basic data export without formatting
-   - Limited by Excel's ~1M row limit
-   - Good for small reports or summaries
-   - Fast and simple API
+---
 
-2. **Advanced exports**: Use **rust_xlsxwriter** for full Excel features
-   - Cell formatting (colors, fonts, borders, alignment)
-   - Conditional formatting (highlight failures, color scales)
-   - Data validation and dropdown lists
-   - Cell comments and notes
-   - Merged cells and row/column grouping
-   - Charts and sparklines
-   - Formulas and calculations
-   - Multiple worksheets with cross-references
-   - Images and logos
+# Part 2: Visualization & Reporting
 
-**Workflow for advanced Excel:**
-```rust
-use rust_xlsxwriter::*;
+## Overview
 
-// Build data with polars, then extract for formatting
-let mut workbook = Workbook::new();
-let worksheet = workbook.add_worksheet();
+Generate PDF reports with embedded charts and Excel spreadsheets for deep-dive analysis of semiconductor test data.
 
-// Apply rich formatting
-let header_format = Format::new()
-    .set_bold()
-    .set_background_color(Color::RGB(0x4472C4))
-    .set_font_color(Color::White);
-    
-worksheet.write_with_format(0, 0, "TEST_NUM", &header_format)?;
+**Key Goals:**
+- Visual pattern recognition in wafer test data
+- Dual output: PDF (quick analysis) + Excel (deep dive)
+- Support both wafer sort and final test
+- Handle multi-site parallel testing (4-64+ sites)
 
-// Add conditional formatting for failures
-let fail_format = Format::new().set_background_color(Color::Red);
-worksheet.conditional_format(1, 3, 1000, 3, 
-    &ConditionalFormatCell::new()
-        .set_criteria(ConditionalFormatCellCriteria::LessThan)
-        .set_value(0.0)
-        .set_format(&fail_format)
-)?;
+## Data Flow (Visualization)
 
-workbook.save("report.xlsx")?;
+```
+STDF Parser
+    ↓
+Polars DataFrame (millions of measurements)
+    ↓
+Test Report Structures (models)
+    ↓
+Statistics Calculations (Cp, CpK)
+    ↓
+Chart Generation (plotters)
+    ↓
+PDF Report + Excel Spreadsheet
 ```
 
-**Recommendation:**
-- Use **Parquet** for large datasets and data pipelines
-- Use **polars.write_excel()** for quick data dumps
-- Use **rust_xlsxwriter** for presentation-quality reports with formatting
+### Input Data Structure
 
-## Compression Support
+**Per Die:**
+- PIR (Part Information Record) - site info
+- PTR/FTR sequence (n parametric + m functional tests)
+- PRR (Part Result Record) - pass/fail + X/Y coordinates
 
-### Supported Formats
+**Key Fields:**
+- `X_COORD`, `Y_COORD`: i16, -32768 = no spatial data (final test)
+- `SITE_NUM`: Which parallel test site (1-64+)
+- `HARD_BIN`, `SOFT_BIN`: Bin assignments
+- Test values and limits (LSL, LTL, HTL, HSL)
 
-The parser can support streaming decompression for the following formats:
+## Test Types
 
-1. **flate2** - gzip/zlib/deflate compression (`.gz`, `.z`)
-   - Most widely compatible
-   - Moderate speed and compression ratio
-   - Standard library support
+### Parametric Tests (PTR)
+- Measured values with units (mΩ, mA, V, ns, etc.)
+- Has test limits and statistical analysis
+- Generates full visualization
 
-2. **bzip2** - BZ2 compression (`.bz2`)
-   - Better compression than gzip
-   - Slower than gzip
+### Functional Tests (FTR)
+- Binary pass/fail results
+- No statistics or gradient visualization
+- Simple pass/fail percentages
 
-3. **xz2** - LZMA/XZ compression (`.xz`)
-   - Excellent compression ratio
-   - Slower compression/decompression
+## Visualization Design
 
-4. **zstd** - Zstandard compression (`.zst`)
-   - **RECOMMENDED**: Best balance of speed and compression ratio
-   - Fast decompression
-   - Modern algorithm by Facebook
+### Color Schemes
 
-5. **lz4** - LZ4 compression (`.lz4`)
-   - Extremely fast decompression
-   - Lower compression ratio
-   - Good for real-time processing
+#### Diverging Gradient (Parametric Tests)
+**Purpose**: Visual pattern recognition across dies
 
-6. **zip** - ZIP archives (`.zip`)
-   - Archive format (can contain multiple files)
-   - Uses deflate compression internally
-   - Cross-platform standard
+**Algorithm**:
+```
+Blue (low) ← Green (median) → Orange (high)
+      ↑                          ↑
+   P10 (10th percentile)    P90 (90th percentile)
+```
 
-7. **tar** - TAR archives (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`)
-   - Archive format (can contain multiple files)
-   - Commonly combined with compression formats above
+**Color mapping**:
+```rust
+fn value_to_color(value: f64, p10: f64, median: f64, p90: f64) -> RGB {
+    if value < median {
+        // Blue → Green interpolation
+        let ratio = (value - p10) / (median - p10);
+        interpolate(BLUE, GREEN, ratio)
+    } else {
+        // Green → Orange interpolation
+        let ratio = (value - median) / (p90 - median);
+        interpolate(GREEN, ORANGE, ratio)
+    }
+}
+```
 
-### Implementation Notes
+**Colors**:
+- Blue: RGB(0, 128, 255) - Low values
+- Green: RGB(0, 255, 0) - Median/center
+- Orange: RGB(255, 128, 0) - High values
 
-- All formats support streaming/on-the-fly decompression via Rust's `Read` trait
-- No need to decompress entire file into memory
-- Can wrap file handles transparently with decoders
-- Existing iterator code works unchanged with compressed input
-- **File format detection**: Using `infer` crate for content-based detection (magic bytes)
-  - Detects compression format by reading file header, not by extension
-  - Works even if file extension is wrong or missing
-  - Supports all compression formats listed above
-  - Lightweight and fast (only reads first few bytes)
+**Rationale**: Diverging gradient centered on median makes patterns visible regardless of absolute scale.
 
-## Notes & Gotchas
+#### Capability Colors (Statistics Table)
+**Purpose**: Highlight poor process capability
 
-1. **Endianness**: FAR record determines byte order for entire file
-2. **Variable-length fields**: Strings and arrays have length prefix
-3. **Optional fields**: Missing fields treated as None/empty
-4. **Array fields**: Not fully implemented in ATDF conversion
-5. **File corruption**: Some real-world files don't start with FAR (handle gracefully)
-6. **MRR requirement**: Valid files should end with MRR, but many don't
+**Rules**:
+```rust
+fn capability_cell_color(cp: f64, cpk: f64) -> Option<Color> {
+    if cp < 1.0 || cpk < 1.0 {
+        return Some(RED_BACKGROUND);      // Failing capability
+    }
+    if cp < 1.33 || cpk < 1.33 {
+        return Some(ORANGE_BACKGROUND);   // Marginal capability
+    }
+    None  // Good capability (no background)
+}
+```
 
-## Contact & Contribution
+**Colors**:
+- Red: RGB(255, 200, 200) - Cp/CpK < 1.0
+- Orange: RGB(255, 230, 200) - Cp/CpK < 1.33
+- White: No highlight - Cp/CpK ≥ 1.33
 
-This is an active development project. See TODO.md for pending work.
+### Test Limits Visualization
+
+#### Vertical Scaling (1/12 - 10/12 - 1/12)
+**Purpose**: Make test data readable regardless of limit range
+
+**Layout**:
+```
+┌─────────────────┐  ← HSL (1/12 height)
+│   Spec Limit    │
+├─────────────────┤  ← HTL
+│                 │
+│                 │
+│   Test Range    │
+│   (10/12)       │
+│                 │
+│                 │
+├─────────────────┤  ← LTL
+│   Spec Limit    │
+└─────────────────┘  ← LSL (1/12 height)
+```
+
+**Formula**:
+```rust
+let total_height = 1200;
+let limit_zone = 100;  // 1/12 of total
+let test_zone = 1000;  // 10/12 of total
+
+let y_pos = if value > HTL {
+    interpolate(HTL_y, HSL_y, (value - HTL) / (HSL - HTL))
+} else if value < LTL {
+    interpolate(LSL_y, LTL_y, (value - LSL) / (LTL - LSL))
+} else {
+    interpolate(LTL_y, HTL_y, (value - LTL) / (HTL - LTL))
+}
+```
+
+#### Gradient Bar
+**Visual element**: Colored bar showing where measurement falls in test range
+
+```
+LSL    LTL                    HTL    HSL
+ ├──────┼──────────────────────┼──────┤
+ │ Red  │     Green Zone       │ Red  │
+        ↑
+        └─ Arrow indicates median position
+```
+
+### Charts & Visualizations
+
+#### 1. Wafer Map
+**Condition**: Only if `X_COORD ≠ -32768` and `Y_COORD ≠ -32768`
+
+**Layout**:
+- Circular wafer boundary
+- Scale die X/Y to fit in circle
+- Color each die by test value (diverging gradient)
+- Show bin failures as dark/black
+
+**Site handling**: Abstract away (average or show S1 only)
+
+#### 2. Trend Chart
+**Purpose**: Show test values in die sequence
+
+**Axes**:
+- X: Die number (sequence)
+- Y: Test value (scaled with 1/12-10/12-1/12)
+
+**Elements**:
+- Scatter points colored by gradient
+- Median line (green, horizontal)
+- Test limits (LTL/HTL as horizontal lines)
+
+#### 3. Histogram (Rotated 90°)
+**Purpose**: Show value distribution
+
+**Orientation**: Rotated to fit alongside trend chart
+
+**Elements**:
+- Bins colored by gradient
+- Normal distribution overlay (if applicable)
+- Show skewness visually
+
+#### 4. Gradient Bar
+As described above - visual reference for color mapping
+
+#### 5. Statistics Table
+**Columns**: Test number, Test name, N, Min, Max, Mean, Median, σ, Cp, CpK, Unit
+
+**Formatting**:
+- Red/orange backgrounds for poor Cp/CpK
+- Freeze panes (header row)
+- Conditional formatting in Excel
+
+### Multi-Site Handling
+
+**Problem**: Parallel testing (S1, S2, S3, S4...) creates visual clutter
+
+**Solution**: Abstract sites in visualizations
+- Show **aggregated** wafer maps (average or S1 only)
+- Show **all sites** only in statistics table
+- Keep raw data with site info in Excel wide matrix
+
+## Output Formats
+
+### PDF Report
+
+**Structure**:
+1. **Summary Page**
+   - Lot information (LOT_ID, wafer count, test date)
+   - Test list with hyperlinks
+   - Statistics summary table
+   
+2. **Individual Test Pages** (one per test)
+   - Test name, number, units
+   - Wafer map (if spatial data exists)
+   - Trend chart
+   - Histogram (rotated)
+   - Gradient bar
+   - Statistics summary
+
+**Technical**:
+- Use `printpdf` for PDF generation
+- Embed SVG charts generated by `plotters`
+- Internal hyperlinks from summary to test pages
+- Page size: A4 landscape
+
+### Excel Spreadsheet
+
+**Structure**:
+1. **Summary Sheet**
+   - Same as PDF summary page
+   - Statistics table with formatting
+   
+2. **Data Matrix Sheet** (Wide format)
+   - **Rows**: One per die
+   - **Columns**: 
+     - PART_ID
+     - X_COORD, Y_COORD
+     - SITE_NUM
+     - HARD_BIN, SOFT_BIN
+     - Test_1_value, Test_1_status
+     - Test_2_value, Test_2_status
+     - ... (all tests as columns)
+   
+   **Example**:
+   ```
+   PART_ID | X | Y | SITE | HBIN | SBIN | T1_val | T1_stat | T2_val | T2_stat | ...
+   --------|---|---|------|------|------|--------|---------|--------|---------|----
+   1       | 0 | 0 | 1    | 1    | 1    | 1.234  | PASS    | 5.678  | PASS    | ...
+   2       | 0 | 1 | 1    | 1    | 1    | 1.235  | PASS    | 5.680  | PASS    | ...
+   ```
+
+**Formatting**:
+- Freeze panes (header row + first 3 columns)
+- Conditional formatting for failures
+- Cell colors matching PDF gradient (optional)
+- Filter buttons enabled
+
+**Technical**:
+- Use `rust_xlsxwriter` for rich formatting
+- Support up to Excel's 1M row limit
+- For larger datasets, split into multiple sheets or use Parquet
+
+### Parquet Cache (Lot-Level Analysis)
+
+**Purpose**: Multi-file aggregation for lot analysis (50-75 STDF files per lot)
+
+**Schema** (columnar):
+```
+wafer_id: String
+part_id: i32
+x_coord: i16
+y_coord: i16
+site_num: u8
+hard_bin: u16
+soft_bin: u16
+test_num: u32
+test_name: String
+test_value: f64
+test_status: String
+units: String
+lo_limit: f64
+hi_limit: f64
+```
+
+**Usage Pattern**:
+1. Parse each STDF file → DataFrame
+2. Write to Parquet with wafer_id
+3. For lot analysis: Read all Parquet files → Concatenate → Analyze
+
+**Benefits**:
+- 10-20x compression vs raw STDF
+- Fast filtering (e.g., "all results for test 1234 across 75 wafers")
+- Cross-wafer correlation analysis
+- Temperature correlation (hot/room/cold)
+- WS→FT correlation
+
+## Statistics Calculations
+
+### Formulas
+
+**Process Capability**:
+```
+Cp = (HTL - LTL) / (6 × σ)
+```
+
+**Process Capability Index (Lower)**:
+```
+CpKL = (Mean - LTL) / (3 × σ)
+```
+
+**Process Capability Index (Upper)**:
+```
+CpKH = (HTL - Mean) / (3 × σ)
+```
+
+**Overall CpK**:
+```
+CpK = min(CpKL, CpKH)
+```
+
+**Interpretation**:
+- `Cp ≥ 1.33`: Process capable
+- `1.0 ≤ Cp < 1.33`: Marginal capability
+- `Cp < 1.0`: Process not capable
+- `CpK` accounts for process centering
+
+### Implementation
+
+Using polars for efficient grouped calculations:
+```rust
+use polars::prelude::*;
+
+let stats = df
+    .groupby(&["test_num"])?
+    .agg(&[
+        col("test_value").count().alias("n"),
+        col("test_value").min().alias("min"),
+        col("test_value").max().alias("max"),
+        col("test_value").mean().alias("mean"),
+        col("test_value").median().alias("median"),
+        col("test_value").std(1).alias("std"),
+    ])?;
+
+// Calculate Cp, CpK from aggregated stats
+```
+
+## Lot-Level Analysis Features
+
+### Multi-File Aggregation
+1. Parse all STDF files in lot
+2. Cache each as Parquet with wafer identifier
+3. Load all Parquet files into single DataFrame
+4. Generate lot-level reports
+
+### Cross-Wafer Analysis
+- Wafer-to-wafer variation
+- Identify outlier wafers
+- Track trends across wafer sequence
+
+### Temperature Correlation
+- Compare hot/room/cold test results
+- Identify temperature-sensitive parameters
+- Visualize Δ(hot-cold) distributions
+
+### WS→FT Correlation
+- Match wafer sort to final test by coordinates
+- Calculate FT yield by WS bin
+- Identify WS bin splits at FT
+
+## Dependencies (Visualization)
+
+```toml
+[dependencies]
+# Existing
+memmap2 = "0.9"
+byte = "0.2"
+clap = "4.5"
+anyhow = "1.0"
+pyo3 = { version = "0.22", optional = true }
+
+# Visualization (NEW)
+polars = { version = "0.44", features = ["parquet", "lazy", "dtype-datetime"] }
+plotters = "0.3"
+rust_xlsxwriter = "0.79"
+printpdf = "0.7"
+```
+
+## Module Structure
+
+```
+src/
+├── lib.rs              # Library root, module exports
+├── types.rs            # STDF data types
+├── records.rs          # STDF V4 record definitions
+├── parsers.rs          # STDF parser, iterators
+├── tally.rs            # Record tallying
+├── conversions.rs      # Data conversions
+├── export.rs           # Integration layer (NEW)
+│
+├── models/             # Data structures (NEW)
+│   └── mod.rs          # TestReport, TestLimits, ParametricTest, etc.
+│
+├── statistics/         # Statistical calculations (NEW)
+│   └── mod.rs          # Cp, CpK, distributions
+│
+├── charts/             # Chart generation (NEW)
+│   ├── mod.rs          # Chart trait, factory
+│   └── colors.rs       # Color mapping functions
+│
+└── writers/            # Output writers (RESTRUCTURED)
+    ├── mod.rs          # ReportWriter trait
+    ├── stdf.rs         # STDF binary writer (existing)
+    ├── pdf.rs          # PDF report writer (NEW)
+    ├── xlsx.rs         # Excel writer (NEW)
+    └── parquet.rs      # Parquet cache writer (NEW)
+```
+
+## Implementation Roadmap
+
+### Phase 1: Core Data Conversion ✅ (Partially)
+- [x] Define data models (`TestReport`, `ParametricTest`, etc.)
+- [x] Implement statistics calculations (Cp, CpK)
+- [x] Implement color mapping functions
+- [ ] STDF → DataFrame conversion
+- [ ] DataFrame → TestReport structures
+
+### Phase 2: Chart Generation 🔄 (In Progress)
+- [x] Color gradient algorithm
+- [ ] Wafer map renderer
+- [ ] Trend chart
+- [ ] Histogram (rotated)
+- [ ] Gradient bar
+
+### Phase 3: Excel Writer 🔄 (In Progress)
+- [ ] Summary sheet
+- [ ] Wide data matrix
+- [ ] Cell formatting (colors, freeze panes)
+
+### Phase 4: PDF Writer 📋 (Planned)
+- [ ] Summary page with test list
+- [ ] Embed SVG charts
+- [ ] Internal hyperlinks
+- [ ] Page layout
+
+### Phase 5: Lot-Level Analysis 📋 (Planned)
+- [ ] Parquet caching system
+- [ ] Multi-file aggregation
+- [ ] Cross-wafer analysis
+- [ ] Temperature correlation
+- [ ] Lot summary reports
+
+---
+
+# Development & Testing
+
+## Build System
+
+Cargo workspace with multiple crates:
+- Main crate: `semi-ate-stdf`
+- Procedural macro: `stdf-record-derive`
+
+## Testing
+
+### Test Files
+Located in `data/` directory (production STDF files)
+
+### Test Strategy
+1. Unit tests for parsers and statistics
+2. Integration tests with real STDF files
+3. Visual regression tests for charts (future)
+4. Performance benchmarks
+
+## Python Integration
+
+### Current State
+- Python bindings scaffolded via PyO3
+- Full API exposure pending
+
+### Future Python API
+```python
+import stdf
+
+# Parsing
+parser = stdf.Parser("test.stdf")
+for record in parser:
+    print(record)
+
+# High-level operations
+info = stdf.info("test.stdf")
+df = stdf.to_dataframe("test.stdf")  # Polars/Pandas DataFrame
+
+# Visualization
+stdf.export_pdf("test.stdf", "report.pdf")
+stdf.export_xlsx("test.stdf", "data.xlsx")
+```
+
+## Build & Distribution
+
+### Rust
+- Cargo workspace
+- Target: Windows, Linux, macOS
+
+### Python
+- Maturin for building wheels
+- PyPI: `Semi-ATE-stdf`
+- Conda: `semi-ate-stdf` (conda-forge)
+
+---
+
+# Design Patterns
+
+### Iterator Pattern
+Lazy evaluation for all parsing operations
+
+### Type Safety
+Binary format mapped to strongly-typed Rust enums
+
+### Procedural Macros
+Code generation for repetitive parsing logic
+
+### Writer Trait
+Abstraction for multiple output formats:
+```rust
+pub trait ReportWriter {
+    fn write_report(&mut self, report: &TestReport) -> Result<()>;
+}
+```
+
+---
+
+# Notes & Considerations
+
+## Performance
+- Parser: ~900 MB/s throughput
+- Visualization: Slower (chart rendering, file I/O)
+- Use progress bars for long operations
+
+## Known Issues
+1. **PyO3/Polars version conflict**: May need feature flags or separate binaries
+2. **Excel row limit**: 1M rows (use Parquet for larger datasets)
+3. **Array field handling**: Not fully implemented in ATDF conversion
+4. **File corruption**: Some real-world files don't start with FAR
+
+## Future Enhancements
+1. Real-time streaming visualization
+2. Interactive web-based reports (WASM)
+3. Machine learning integration (outlier detection)
+4. Multi-threaded parsing for parallel processing
 
 ---
 
 *Last updated: 2024-12-08*
-*Commit: 2a51179*
+*Combined from parser (DESIGN-old.md) and visualization (DESIGN-viz.md) documentation*

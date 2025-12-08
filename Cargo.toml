@@ -30,9 +30,14 @@ flate2 = "1.0"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 indicatif = "0.17"
 infer = "0.16"
-# polars = { version = "0.44", features = ["parquet", "lazy"] }  # TODO: Re-enable when pyo3 version conflict is resolved
-rust_xlsxwriter = "0.68"
 regex = "1.11"
+
+# Visualization dependencies
+rust_xlsxwriter = "0.79"
+plotters = "0.3"
+printpdf = "0.7"
+anyhow = "1.0"
+# polars = { version = "0.44", features = ["parquet", "lazy"] }  # TODO: Re-enable when pyo3 version conflict is resolved
 
 [features]
 default = []
