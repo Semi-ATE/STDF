@@ -1,14 +1,87 @@
 # stdf
 
-## stdf show (single return value per file)
+## stdf show : single return value per file
 
 - stdf show tester `<file>` --> MIR:NODE_NAM
+
+    ```bash
+    $ stdf show tester somefile.stdf
+    v93k47
+    ```
+
 - stdf show tester `<directory>` [-r] --> MIR:NODE_NAM for all stdf files in `<directory>`, and sub dirs if -r is given
+
+    ```bash
+    $ stdf show tester somedir
+    somedir/file1.std : diamond28
+    somedir/file2.std : v93k47
+    somedir/file3.stdf : IFLEX-14
+    ...
+    ```
+
+    ```bash
+    $ stdf show tester somedir -r
+    somedir/file1.std : diamond28
+    somedir/file2.std : v93k47
+    somedir/file3.stdf : IFLEX-14
+    somedir/otherdir/otherfile.stdf : diamond53
+    ...
+    ```
+
 - stdf show tester type `<file>` --> MIR:TSTR_TYP
+
+    ```bash
+    $ stdf show tester type somefile.stdf
+    93000-SOC
+    ```
+
 - stdf show tester type `<directory>` [-r] --> MIR:TSTR_TYP for all stdf files in `<directory>`, and sub dirs if -r is given 
+
+    ```bash
+    $ stdf show tester type somedir
+    somedir/file1.std : D-10
+    somedir/file2.std : 93000-SOC
+    somedir/file3.stdf : IntegraFlex
+    ...
+    ```
+
+    ```bash
+    $ stdf show tester type somedir -r
+    somedir/file1.std : D-10
+    somedir/file2.std : 93000-SOC
+    somedir/file3.stdf : IntegraFlex
+    somedir/otherdir/otherfile.stdf : D-10
+    ...
+    ```
+
 - stdf show endian `<file>` --> endian of the file
+
+    ```bash
+    $ stdf show endian somefile.stdf
+    LE
+    ```
+
 - stdf show endian `<directory>` [-r] --> endian of all stdf files in `<directory>`, and sub dirs if -r is given 
+
+    ```bash
+    $ stdf show endian somedir
+    somedir/file1.std : LE
+    somedir/file2.std : LE
+    somedir/file3.stdf : BE
+    ...
+    ```
+
+    ```bash
+    $ stdf show endian somedir -r
+    somedir/file1.std : LE
+    somedir/file2.std : LE
+    somedir/file3.stdf : BE
+    somedir/otherdir/otherfile.stdf : LE
+    ...
+    ```
+
 - stdf show temperature `<file>`
+
 - stdf show temperature `<directory>` [-r]
 - stdf show mir `<mir_field_name>` `<file>` 
 - stdf show mir `<mir_field_name>` `<directory>` [-r] --> 
