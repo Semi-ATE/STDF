@@ -1641,7 +1641,7 @@ class STDR(ABC):
                             raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
-                        result = working_buffer.decode()
+                        result = working_buffer.decode('utf-8',errors='replace')
                     elif Bytes == 'n': # C*n
                         working_buffer = self.buffer[0:1]
                         self.buffer = self.buffer[1:]
@@ -1650,14 +1650,14 @@ class STDR(ABC):
                             raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
-                        result = working_buffer.decode('utf-8')
+                        result = working_buffer.decode('utf-8',errors='replace')
                     elif Bytes == 'f': # C*f
                         n_bytes = self.get_fields(Ref)[3]
                         if len(self.buffer) < n_bytes:
                             raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
-                        result = working_buffer.decode()
+                        result = working_buffer.decode('utf-8',errors='replace')
                     else:
                         raise STDFError("%s.%(%s) : Unsupported type '%s'." % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                     if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
