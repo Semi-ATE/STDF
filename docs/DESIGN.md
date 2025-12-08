@@ -128,7 +128,11 @@ Boolean validation commands returning exit codes:
 - `is truncated <file>`: Check if file is incomplete (corrupted/truncated)
 - `is complete <file>`: Check if file ends with MRR record
 
-Exit codes: `0`=true, `1`=false, `2`=error
+**Exit codes:** `0`=success/true, `1`=false/not found, `2`=error
+
+**Cross-shell compatibility:** Exit codes work identically across all platforms and shells:
+- Windows: PowerShell (`$LASTEXITCODE`), CMD (`%ERRORLEVEL%`)
+- Linux/macOS: bash/zsh/fish/sh (`$?`)
 
 #### **endian** ✅
 ```bash
