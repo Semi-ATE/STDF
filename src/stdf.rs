@@ -1,95 +1,224 @@
-use std::env;
 use std::process;
 use std::collections::HashMap;
 
+use clap::{Parser, Subcommand};
 use stdf::parsers::StdfParser;
 
+/// Semi-ATE STDF Tool - Fast STDF file parser and analyzer
+#[derive(Parser)]
+#[command(name = "stdf")]
+#[command(version)]
+#[command(about = "Standard Test Data Format (STDF) file parser and analyzer", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Count records, parts, tests, or wafers
+    Count {
+        #[command(subcommand)]
+        subcommand: CountCommands,
+    },
+    /// Show tallies of records, heads, sites, bins
+    Tally {
+        #[command(subcommand)]
+        subcommand: TallyCommands,
+    },
+    /// Display specific field values from STDF records
+    Show {
+        /// Record type (e.g., MIR, PRR, PTR)
+        record_type: String,
+        /// Field name or 'fields' to list available fields
+        field: String,
+        /// STDF file path
+        file: String,
+        /// Limit number of results (e.g., -10 for first 10)
+        #[arg(short = 'n', long)]
+        limit: Option<i32>,
+    },
+    /// Dump records from STDF file
+    Dump {
+        /// STDF file path
+        file: String,
+        /// Specific record types to dump (optional, e.g., MIR PRR)
+        #[arg(num_args = 0..)]
+        record_types: Vec<String>,
+    },
+    /// Check file properties (ft, ws, hot, cold, room, truncated, complete)
+    Is {
+        /// Test type: ft, ws, hot, cold, room, truncated, complete
+        test_type: String,
+        /// STDF file path
+        file: String,
+    },
+    /// Get file endianness (LE or BE)
+    Endian {
+        /// STDF file path
+        file: String,
+    },
+    /// Get lot ID
+    Lot {
+        /// STDF file path
+        file: String,
+    },
+    /// Get tester name or type
+    Tester {
+        /// Get tester type instead of name
+        #[arg(long)]
+        type_only: bool,
+        /// STDF file path
+        file: String,
+    },
+    /// Get test temperature
+    Temperature {
+        /// Parse temperature as integer
+        #[arg(long)]
+        int: bool,
+        /// STDF file path
+        file: String,
+    },
+    /// Convert STDF file to another format
+    To {
+        /// Output format: xlsx, atdf, hdf5
+        format: String,
+        /// Force overwrite if output exists
+        #[arg(short, long)]
+        force: bool,
+        /// STDF file path
+        file: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CountCommands {
+    /// Count total number of records
+    Records {
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+    },
+    /// Count parts with crash detection
+    Parts {
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+        /// Count unique parts excluding retests
+        #[arg(long)]
+        unique: bool,
+    },
+    /// Count test records (PTR + FTR + MPR)
+    Tests {
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+    },
+    /// Count wafers with crash detection
+    Wafers {
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+    },
+    /// Count soft bins (not yet implemented)
+    Sbins {
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+    },
+    /// Count hard bins (not yet implemented)
+    Hbins {
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+    },
+    /// Count specific record types
+    Types {
+        /// Record types to count (e.g., PTR FTR)
+        #[arg(num_args = 1..)]
+        record_types: Vec<String>,
+        /// Path to STDF file or directory
+        path: String,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum TallyCommands {
+    /// Show tally of each record type
+    Records {
+        /// STDF file path
+        file: String,
+    },
+    /// Show tally of test heads (not yet implemented)
+    Heads {
+        /// STDF file path
+        file: String,
+    },
+    /// Show tally of sites (not yet implemented)
+    Sites {
+        /// STDF file path
+        file: String,
+    },
+    /// Show tally of hard bins (not yet implemented)
+    Hbins {
+        /// STDF file path
+        file: String,
+    },
+    /// Show tally of soft bins (not yet implemented)
+    Sbins {
+        /// STDF file path
+        file: String,
+    },
+}
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let cli = Cli::parse();
     
-    if args.len() < 2 {
-        print_usage(&args[0]);
-        return;
-    }
-    
-    let command = &args[1];
-    
-    match command.as_str() {
-        "count" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing arguments");
-                eprintln!("Usage: {} count [record_types...] <path> [-r]", args[0]);
-                process::exit(1);
-            }
-            
-            let subcommand = &args[2];
-            match subcommand.as_str() {
-                "records" => {
-                    if args.len() < 4 {
-                        eprintln!("Error: Missing path argument");
-                        eprintln!("Usage: {} count records <path> [-r]", args[0]);
-                        process::exit(1);
-                    }
-                    let path = &args[3];
-                    let recursive = args.len() >= 5 && args[4] == "-r";
-                    handle_count_for_path(path, recursive, CountMode::All);
+    match cli.command {
+        Commands::Count { subcommand } => {
+            match subcommand {
+                CountCommands::Records { path, recursive } => {
+                    handle_count_for_path(&path, recursive, CountMode::All);
                 }
-                "parts" => {
-                    if args.len() < 4 {
-                        eprintln!("Error: Missing path argument");
-                        eprintln!("Usage: {} count parts <path> [-r]", args[0]);
+                CountCommands::Parts { path, recursive, unique } => {
+                    if unique {
+                        eprintln!("'count parts --unique' not yet implemented");
                         process::exit(1);
                     }
-                    if args.len() >= 5 && args[3] == "unique" {
-                        eprintln!("'count parts unique' not yet implemented");
-                        process::exit(1);
-                    }
-                    let path = &args[3];
-                    let recursive = args.len() >= 5 && args[4] == "-r";
-                    handle_count_for_path(path, recursive, CountMode::Parts);
+                    handle_count_for_path(&path, recursive, CountMode::Parts);
                 }
-                "tests" => {
-                    if args.len() < 4 {
-                        eprintln!("Error: Missing path argument");
-                        eprintln!("Usage: {} count tests <path> [-r]", args[0]);
-                        process::exit(1);
-                    }
-                    let path = &args[3];
-                    let recursive = args.len() >= 5 && args[4] == "-r";
+                CountCommands::Tests { path, recursive } => {
                     let record_types = vec!["PTR".to_string(), "FTR".to_string(), "MPR".to_string()];
-                    handle_count_for_path(path, recursive, CountMode::Specific(record_types));
+                    handle_count_for_path(&path, recursive, CountMode::Specific(record_types));
                 }
-                "wafers" => {
-                    if args.len() < 4 {
-                        eprintln!("Error: Missing path argument");
-                        eprintln!("Usage: {} count wafers <path> [-r]", args[0]);
-                        process::exit(1);
-                    }
-                    let path = &args[3];
-                    let recursive = args.len() >= 5 && args[4] == "-r";
-                    handle_count_for_path(path, recursive, CountMode::Wafers);
+                CountCommands::Wafers { path, recursive } => {
+                    handle_count_for_path(&path, recursive, CountMode::Wafers);
                 }
-                "sbins" => {
+                CountCommands::Sbins { .. } => {
                     eprintln!("'count sbins' not yet implemented");
                     process::exit(1);
                 }
-                "hbins" => {
+                CountCommands::Hbins { .. } => {
                     eprintln!("'count hbins' not yet implemented");
                     process::exit(1);
                 }
-                _ => {
-                    // Generic count: stdf count [record_types...] <path> [-r]
-                    // Check if last arg is -r
-                    let has_recursive = args.len() >= 4 && args[args.len() - 1] == "-r";
-                    let path_index = if has_recursive { args.len() - 2 } else { args.len() - 1 };
-                    let path = &args[path_index];
-                    
-                    let record_types: Vec<String> = args[2..path_index]
-                        .iter()
-                        .map(|s| s.to_uppercase())
-                        .collect();
-                    
-                    // Validate all record types if specified
+                CountCommands::Types { record_types, path, recursive } => {
+                    // Validate all record types
                     for rt in &record_types {
                         if get_record_type_codes(rt).is_none() {
                             eprintln!("Error: Unknown record type '{}'", rt);
@@ -106,27 +235,14 @@ fn main() {
                         CountMode::Specific(record_types)
                     };
                     
-                    handle_count_for_path(path, has_recursive, mode);
+                    handle_count_for_path(&path, recursive, mode);
                 }
             }
         }
-        "tally" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing subcommand");
-                eprintln!("Usage: {} tally <records|heads|sites|hbins|sbins> <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            
-            let subcommand = &args[2];
-            match subcommand.as_str() {
-                "records" => {
-                    if args.len() < 4 {
-                        eprintln!("Error: Missing file argument");
-                        eprintln!("Usage: {} tally records <stdf_file>", args[0]);
-                        process::exit(1);
-                    }
-                    let filename = &args[3];
-                    match tally_records(filename) {
+        Commands::Tally { subcommand } => {
+            match subcommand {
+                TallyCommands::Records { file } => {
+                    match tally_records(&file) {
                         Ok(_) => {},
                         Err(e) => {
                             eprintln!("Error: {:?}", e);
@@ -134,45 +250,31 @@ fn main() {
                         }
                     }
                 }
-                "heads" => {
+                TallyCommands::Heads { .. } => {
                     eprintln!("'tally heads' not yet implemented");
                     process::exit(1);
                 }
-                "sites" => {
+                TallyCommands::Sites { .. } => {
                     eprintln!("'tally sites' not yet implemented");
                     process::exit(1);
                 }
-                "hbins" => {
+                TallyCommands::Hbins { .. } => {
                     eprintln!("'tally hbins' not yet implemented");
                     process::exit(1);
                 }
-                "sbins" => {
+                TallyCommands::Sbins { .. } => {
                     eprintln!("'tally sbins' not yet implemented");
-                    process::exit(1);
-                }
-                _ => {
-                    eprintln!("Error: Unknown subcommand '{}'", subcommand);
-                    eprintln!("Usage: {} tally <records|heads|sites|hbins|sbins> <stdf_file>", args[0]);
                     process::exit(1);
                 }
             }
         }
-        "dump" => {
-            // Parse arguments: stdf dump [record_types...] <file>
-            // The last argument is always the file
-            if args.len() < 3 {
-                eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} dump [record_types...] <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            
-            let filename = &args[args.len() - 1];
-            let record_types: Vec<String> = args[2..args.len() - 1]
+        Commands::Dump { record_types, file } => {
+            // Uppercase record types and remove duplicates
+            let record_types: Vec<String> = record_types
                 .iter()
                 .map(|s| s.to_uppercase())
                 .collect();
             
-            // Remove duplicates
             let mut unique_types: Vec<String> = Vec::new();
             for rt in record_types {
                 if !unique_types.contains(&rt) {
@@ -180,7 +282,7 @@ fn main() {
                 }
             }
             
-            match dump_stdf(filename, &unique_types) {
+            match dump_stdf(&file, &unique_types) {
                 Ok(_) => {},
                 Err(e) => {
                     eprintln!("Error: {:?}", e);
@@ -188,32 +290,8 @@ fn main() {
                 }
             }
         }
-        "to" => {
-            if args.len() < 4 {
-                eprintln!("Error: Missing arguments");
-                eprintln!("Usage: {} to <xlsx|atdf|hdf5> [-f] <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            
-            // Parse arguments: format and optional -f flag
-            let format = args[2].to_lowercase();
-            let mut force = false;
-            let filename;
-            
-            // Check if -f flag is present
-            if args.len() == 5 && args[3] == "-f" {
-                force = true;
-                filename = &args[4];
-            } else if args.len() == 5 && args[4] == "-f" {
-                force = true;
-                filename = &args[3];
-            } else if args.len() == 4 {
-                filename = &args[3];
-            } else {
-                eprintln!("Error: Invalid arguments");
-                eprintln!("Usage: {} to <xlsx|atdf|hdf5> [-f] <stdf_file>", args[0]);
-                process::exit(1);
-            }
+        Commands::To { format, force, file } => {
+            let format = format.to_lowercase();
             
             match format.as_str() {
                 "xlsx" => {
@@ -221,7 +299,7 @@ fn main() {
                     process::exit(1);
                 }
                 "atdf" => {
-                    match convert_to_atdf(filename, force) {
+                    match convert_to_atdf(&file, force) {
                         Ok(output_path) => {
                             println!("Successfully converted to: {}", output_path);
                         },
@@ -237,23 +315,16 @@ fn main() {
                 }
                 _ => {
                     eprintln!("Error: Unknown format '{}'. Use 'xlsx', 'atdf', or 'hdf5'", format);
-                    eprintln!("Usage: {} to <xlsx|atdf|hdf5> [-f] <stdf_file>", args[0]);
                     process::exit(1);
                 }
             }
         }
-        "is" => {
-            if args.len() < 4 {
-                eprintln!("Error: Missing arguments");
-                eprintln!("Usage: {} is <ft|ws|hot|cold|room|truncated|complete> <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            let test_type = args[2].to_lowercase();
-            let filename = &args[3];
+        Commands::Is { test_type, file } => {
+            let test_type = test_type.to_lowercase();
             
             match test_type.as_str() {
                 "ft" => {
-                    match check_is_ft(filename) {
+                    match check_is_ft(&file) {
                         Ok(true) => process::exit(0),  // Is FT
                         Ok(false) => process::exit(1), // Not FT (is WS)
                         Err(e) => {
@@ -263,7 +334,7 @@ fn main() {
                     }
                 }
                 "ws" => {
-                    match check_is_ws(filename) {
+                    match check_is_ws(&file) {
                         Ok(true) => process::exit(0),  // Is WS
                         Ok(false) => process::exit(1), // Not WS (is FT)
                         Err(e) => {
@@ -273,7 +344,7 @@ fn main() {
                     }
                 }
                 "hot" => {
-                    match check_is_hot(filename) {
+                    match check_is_hot(&file) {
                         Ok(true) => process::exit(0),  // Is hot (>50°C)
                         Ok(false) => process::exit(1), // Not hot
                         Err(e) => {
@@ -283,7 +354,7 @@ fn main() {
                     }
                 }
                 "cold" => {
-                    match check_is_cold(filename) {
+                    match check_is_cold(&file) {
                         Ok(true) => process::exit(0),  // Is cold (<10°C)
                         Ok(false) => process::exit(1), // Not cold
                         Err(e) => {
@@ -293,7 +364,7 @@ fn main() {
                     }
                 }
                 "room" => {
-                    match check_is_room(filename) {
+                    match check_is_room(&file) {
                         Ok(true) => process::exit(0),  // Is room (10-50°C)
                         Ok(false) => process::exit(1), // Not room
                         Err(e) => {
@@ -303,7 +374,7 @@ fn main() {
                     }
                 }
                 "truncated" => {
-                    match check_is_truncated(filename) {
+                    match check_is_truncated(&file) {
                         Ok(true) => process::exit(0),  // Is truncated
                         Ok(false) => process::exit(1), // Not truncated
                         Err(e) => {
@@ -313,7 +384,7 @@ fn main() {
                     }
                 }
                 "complete" => {
-                    match check_is_complete(filename) {
+                    match check_is_complete(&file) {
                         Ok(true) => process::exit(0),  // Is complete (ends with MRR)
                         Ok(false) => process::exit(1), // Not complete
                         Err(e) => {
@@ -324,19 +395,12 @@ fn main() {
                 }
                 _ => {
                     eprintln!("Error: Invalid test type '{}'. Use 'ft', 'ws', 'hot', 'cold', 'room', 'truncated', or 'complete'", test_type);
-                    eprintln!("Usage: {} is <ft|ws|hot|cold|room|truncated|complete> <stdf_file>", args[0]);
                     process::exit(1);
                 }
             }
         }
-        "endian" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} endian <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            let filename = &args[2];
-            match get_endian(filename) {
+        Commands::Endian { file } => {
+            match get_endian(&file) {
                 Ok(endian) => {
                     println!("{}", endian);
                     process::exit(0);
@@ -347,14 +411,8 @@ fn main() {
                 }
             }
         }
-        "lot" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} lot <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            let filename = &args[2];
-            match get_lot_id(filename) {
+        Commands::Lot { file } => {
+            match get_lot_id(&file) {
                 Ok(lot_id) => {
                     println!("{}", lot_id);
                     process::exit(0);
@@ -365,21 +423,9 @@ fn main() {
                 }
             }
         }
-        "tester" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} tester [type] <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            
-            let (get_type, filename) = if args.len() >= 4 && args[2] == "type" {
-                (true, &args[3])
-            } else {
-                (false, &args[2])
-            };
-            
-            if get_type {
-                match get_tester_type(filename) {
+        Commands::Tester { type_only, file } => {
+            if type_only {
+                match get_tester_type(&file) {
                     Ok(tester_type) => {
                         println!("{}", tester_type);
                         process::exit(0);
@@ -390,7 +436,7 @@ fn main() {
                     }
                 }
             } else {
-                match get_tester(filename) {
+                match get_tester(&file) {
                     Ok(tester) => {
                         println!("{}", tester);
                         process::exit(0);
@@ -402,22 +448,10 @@ fn main() {
                 }
             }
         }
-        "temperature" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing file argument");
-                eprintln!("Usage: {} temperature [int] <stdf_file>", args[0]);
-                process::exit(1);
-            }
-            
-            let (as_int, filename) = if args.len() >= 4 && args[2] == "int" {
-                (true, &args[3])
-            } else {
-                (false, &args[2])
-            };
-            
-            match get_temperature(filename) {
+        Commands::Temperature { int, file } => {
+            match get_temperature(&file) {
                 Ok(temp) => {
-                    if as_int {
+                    if int {
                         match parse_temperature_as_int(&temp) {
                             Ok(value) => println!("{}", value),
                             Err(e) => {
@@ -436,72 +470,28 @@ fn main() {
                 }
             }
         }
-        "show" => {
-            if args.len() < 3 {
-                eprintln!("Error: Missing arguments");
-                eprintln!("Usage: {} show <subcommand> [args...]", args[0]);
-                process::exit(1);
-            }
-            
-            handle_show_command(&args);
-        }
-        _ => {
-            eprintln!("Unknown command: {}", command);
-            print_usage(&args[0]);
-            process::exit(1);
+        Commands::Show { record_type, field, file, limit } => {
+            handle_show_command_new(&record_type, &field, &file, limit);
         }
     }
 }
 
-fn print_usage(program: &str) {
-    println!("Semi-ATE STDF Tool");
-    println!("Version: {}", env!("CARGO_PKG_VERSION"));
-    println!("\nUsage: {} <command> [args...]", program);
-    println!("\nCommands:");
-    println!("  count [record_types...] <path> [-r]");
-    println!("                              - Count records (all if none specified, or specific types)");
-    println!("                                Example: count file.std");
-    println!("                                Example: count PTR FTR file.std");
-    println!("                                Example: count directory -r");
-    println!("  count records <path> [-r]   - Count total number of records (same as count <path>)");
-    println!("  count parts <path> [-r]     - Count parts with crash detection (returns decimal if incomplete)");
-    println!("  count parts unique <path>   - Count unique parts excluding retests (not yet implemented)");
-    println!("  count tests <path> [-r]     - Count test records (PTR + FTR + MPR)");
-    println!("  count wafers <path> [-r]    - Count wafers with crash detection (returns decimal if incomplete)");
-    println!("  count sbins <path>          - Count number of soft bins (not yet implemented)");
-    println!("  count hbins <path>          - Count number of hard bins (not yet implemented)");
-    println!("  tally records <file>        - Show tally of each record type");
-    println!("  tally heads <file>          - Show tally of test heads (not yet implemented)");
-    println!("  tally sites <file>          - Show tally of sites (not yet implemented)");
-    println!("  tally hbins <file>          - Show tally of hard bins (not yet implemented)");
-    println!("  tally sbins <file>          - Show tally of soft bins (not yet implemented)");
-    println!("  show <RECORD> <FIELD> <file> [-limit]");
-    println!("                              - Display field value(s) from specified record type");
-    println!("                                Example: show MIR LOT_ID file.std");
-    println!("                                Example: show PRR SITE_NUM file.std -10");
-    println!("  show <RECORD> fields <file> - List all available fields for record type");
-    println!("                                Example: show PTR fields file.std");
-    println!("  dump <file>                 - Dump all records");
-    println!("  dump <record_types...> <file> - Dump specific record types");
-    println!("                                  Example: dump MIR PRR file.std");
-    println!("  is <ft|ws|hot|cold|room|truncated|complete> <file>");
-    println!("                                               - Check file properties");
-    println!("                                               ft: Final Test, ws: Wafer Sort");
-    println!("                                               hot: >50°C, cold: <10°C, room: 10-50°C");
-    println!("                                               truncated: last record incomplete");
-    println!("                                               complete: ends with MRR record");
-    println!("                                               (exit 0=match, 1=no match, 2=error)");
-    println!("  endian <file>               - Get file endianness (outputs: LE or BE)");
-    println!("  lot <file>                  - Get lot ID (shortcut: show MIR LOT_ID)");
-    println!("  tester [type] <file>        - Get tester name/type (shortcut: show MIR NODE_NAM|TSTR_TYP)");
-    println!("  temperature [int] <file>    - Get test temperature (shortcut: show MIR TEST_TMP)");
-    println!("                                  int: parse as integer value");
-    println!("  to <format> [-f] <file>     - Convert STDF file to another format");
-    println!("                                  Formats: xlsx, atdf, hdf5");
-    println!("                                  -f: force overwrite if output exists");
-    println!("                                  Example: to atdf file.std");
-    println!("                                  Example: to atdf -f file.std");
-    println!("  help                        - Show this help message");
+// New show command handler for clap-based CLI
+fn handle_show_command_new(record_type: &str, field: &str, file: &str, limit: Option<i32>) {
+    // Build args vector in the old format for compatibility with existing handle_show_command
+    let mut args = vec![
+        "stdf".to_string(),
+        "show".to_string(),
+        record_type.to_string(),
+        field.to_string(),
+        file.to_string(),
+    ];
+    
+    if let Some(n) = limit {
+        args.push(format!("-{}", n));
+    }
+    
+    handle_show_command(&args);
 }
 
 fn count_records(filename: &str) -> Result<(), std::io::Error> {
