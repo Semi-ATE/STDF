@@ -285,27 +285,128 @@
 
 - stdf dump [`<list of stdf_records>`] `<file>`
 
-    If the list of stdf_records is empty, we mean ALL records.
+    If the list of stdf_records is empty, we mean *ALL* records.
     First we iterate trough the list of stdf_records and verify that all given names are valid STDF records (use is_record function in records.rs) 
     Then we will iterate (StdfRecordIterator) trough the file, instantiate each record and print it (Display)
 
 ## stdf count (single return value per file)
-- stdf count records `<file>`
-- stdf count records `<directory>` [-r]
 
-- stdf count parts `<file>`
-- stdf count parts `<directory>` [-r]
+- stdf count [`<list of stdf_records>`] `<file>`
 
-- stdf count tests `<file>`
-- stdf count tests `<directory>` [-r]
+    If the list of stdf_records is empty, we mean *ALL* records.
+    First we iterate trough the list of stdf_records and verify that all given names are valid STDF records (use is_record function in records.rs) 
+    Then we will iterate memory mapped as we will need to go to the end of the file.
+    We however don't need to instantiate the records, we just need *ONE* counter for all listed records, and increase
+    it each time one of the mentioned records is encountered.
 
-- stdf count wafers `<file>`
-- stdf count wafers `<directory>` [-r]
+    ```bash
+    $ stdf count somefile.stdf
+    157845
+    ```
 
-- stdf count `<record_type>` `<file>`
 - stdf count `<record_type>` `<directory>` [-r]
 
-   returns number and exit code
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+    ```bash
+    $ stdf count somedir
+    somedir/file1.std : 154879
+    somedir/file2.std : 8799547
+    somedir/file3.stdf : 954875
+    ...
+    ```
+
+    ```bash
+    $ stdf count somedir -r
+    somedir/file1.std : 154879
+    somedir/file2.std : 8799547
+    somedir/file3.stdf : 954875
+    somedir/otherdir/otherfile.stdf : 6587884
+    ...
+    ```
+
+- stdf count records `<file>`
+
+    This is a convenience shortcut to `stdf count <file>`, and it is clearer that we need to count all records. 
+
+- stdf count records `<directory>` [-r]
+
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+- stdf count parts `<file>`
+
+    This is *NOT* a convenience shortcut to the generic count command!
+
+    A part has a PIR/Tests/PRR. 
+    We could count only the PRR's, however a tester can sigfault/coredump and then the stdf file is broken.
+    It is thus possible that there are some more PRR's then there are PIR's ...
+    
+    We have thus 2 counters : PIRs and PRRs 
+    In one sweep (memory mapped) we go over the file, not instantinating the records, but each time we encounter a PIR
+    we increment the PIRs count and each time we encounter a PRR we increment the PRRs counter.
+    After the iteration we calculate the Remainer as : Remainer = 1 / (PIRs - PRRs)
+    and we return the sum of PIRs and the calculated Remainer.
+
+    ```bash
+    $ stdf count parts somefile.stdf
+    15487.25
+    ```
+
+    The above example means that we are where testing 4 sites in parallel when the system crashed.
+
+- stdf count parts `<directory>` [-r]
+
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+- stdf count tests `<file>`
+
+    There are 3 type of tests : PTR, FTR and MPR.
+    This is thus a convenience shortcut to `stdf count PTR FTR MPR <file>`
+
+- stdf count tests `<directory>` [-r]
+
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+- stdf count wafers `<file>`
+
+    This is *NOT* a convenience shortcut!
+
+    All records of a wafer are located between WIR and WRR.
+    We thus just need to count the number of WRR records to know how many (finished) wafers are in the stdf file.
+    It is possible that a test program segfaulted and that the stdf is not terminated.
+    In such case we have one WIR more than we have WRR's.
+
+    Best approach is to count the number of WIR's and the number of WRR's (do this in one iterator sweep with 2 counters)
+    and then calculate WIRs-WRRs. The result should be either 0 or 1.
+
+    In the case of 1 we return the number of WIR's + 0.5, in the case the result is 0, we return the number of WIRs.
+
+    Examples: 
+        1.5 --> means one full wafer and a part of another one
+        8.5 --> 8 full wafers and one broken one 
+
+    In any case a .5 means that the stdf file most likely has no MIR at the end ... needs repairing!
+
+- stdf count wafers `<directory>` [-r]
+
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+- stdf count hbins `<file>`
+
+    Each hard bin has a
+
+- stdf count hbins `<directory>` [-r]
+
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+- stdf count sbins `<file>`
+- stdf count sbins `<directory>` [-r]
+
+    Same as above, but instead to work on file base, it works on directory base and possibly all subdirectories if -r is given.
+
+
+
+
 
 # stdf tally (multiple return values per file)
 

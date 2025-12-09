@@ -7,13 +7,17 @@
 ## Not Yet Implemented Commands
 
 ### Count Commands
-- [ ] `count parts <file>` - Count number of parts tested
-- [ ] `count parts unique <file>` - Count unique parts excluding retests
-- [ ] `count sbins <file>` - Count number of soft bins
-- [ ] `count hbins <file>` - Count number of hard bins
+- [x] `count [record_types...] <path> [-r]` - Count specific or all records (COMPLETED)
+- [x] `count records <path> [-r]` - Count total number of records (COMPLETED)
+- [x] `count parts <path> [-r]` - Count number of parts with crash detection (COMPLETED)
+- [x] `count tests <path> [-r]` - Count test records PTR+FTR+MPR (COMPLETED)
+- [x] `count wafers <path> [-r]` - Count wafers with crash detection (COMPLETED)
+- [ ] `count parts unique <path>` - Count unique parts excluding retests
+- [ ] `count sbins <path> [-r]` - Count number of soft bins (needs proper implementation)
+- [ ] `count hbins <path> [-r]` - Count number of hard bins (needs proper implementation)
 
 ### Tally Commands
-- [ ] `tally records <file>` - Show tally of each record type
+- [x] `tally records <file>` - Show tally of each record type (COMPLETED)
 - [ ] `tally heads <file>` - Show tally of test heads
 - [ ] `tally sites <file>` - Show tally of sites
 - [ ] `tally hbins <file>` - Show tally of hard bins

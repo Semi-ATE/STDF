@@ -17,8 +17,8 @@ fn main() {
     match command.as_str() {
         "count" => {
             if args.len() < 3 {
-                eprintln!("Error: Missing subcommand");
-                eprintln!("Usage: {} count <records|parts|sbins|hbins> <stdf_file>", args[0]);
+                eprintln!("Error: Missing arguments");
+                eprintln!("Usage: {} count [record_types...] <path> [-r]", args[0]);
                 process::exit(1);
             }
             
@@ -26,26 +26,48 @@ fn main() {
             match subcommand.as_str() {
                 "records" => {
                     if args.len() < 4 {
-                        eprintln!("Error: Missing file argument");
-                        eprintln!("Usage: {} count records <stdf_file>", args[0]);
+                        eprintln!("Error: Missing path argument");
+                        eprintln!("Usage: {} count records <path> [-r]", args[0]);
                         process::exit(1);
                     }
-                    let filename = &args[3];
-                    match count_records(filename) {
-                        Ok(_) => {},
-                        Err(e) => {
-                            eprintln!("Error: {:?}", e);
-                            process::exit(1);
-                        }
-                    }
+                    let path = &args[3];
+                    let recursive = args.len() >= 5 && args[4] == "-r";
+                    handle_count_for_path(path, recursive, CountMode::All);
                 }
                 "parts" => {
-                    if args.len() >= 4 && args[3] == "unique" {
-                        eprintln!("'count parts unique' not yet implemented");
-                    } else {
-                        eprintln!("'count parts' not yet implemented");
+                    if args.len() < 4 {
+                        eprintln!("Error: Missing path argument");
+                        eprintln!("Usage: {} count parts <path> [-r]", args[0]);
+                        process::exit(1);
                     }
-                    process::exit(1);
+                    if args.len() >= 5 && args[3] == "unique" {
+                        eprintln!("'count parts unique' not yet implemented");
+                        process::exit(1);
+                    }
+                    let path = &args[3];
+                    let recursive = args.len() >= 5 && args[4] == "-r";
+                    handle_count_for_path(path, recursive, CountMode::Parts);
+                }
+                "tests" => {
+                    if args.len() < 4 {
+                        eprintln!("Error: Missing path argument");
+                        eprintln!("Usage: {} count tests <path> [-r]", args[0]);
+                        process::exit(1);
+                    }
+                    let path = &args[3];
+                    let recursive = args.len() >= 5 && args[4] == "-r";
+                    let record_types = vec!["PTR".to_string(), "FTR".to_string(), "MPR".to_string()];
+                    handle_count_for_path(path, recursive, CountMode::Specific(record_types));
+                }
+                "wafers" => {
+                    if args.len() < 4 {
+                        eprintln!("Error: Missing path argument");
+                        eprintln!("Usage: {} count wafers <path> [-r]", args[0]);
+                        process::exit(1);
+                    }
+                    let path = &args[3];
+                    let recursive = args.len() >= 5 && args[4] == "-r";
+                    handle_count_for_path(path, recursive, CountMode::Wafers);
                 }
                 "sbins" => {
                     eprintln!("'count sbins' not yet implemented");
@@ -56,9 +78,35 @@ fn main() {
                     process::exit(1);
                 }
                 _ => {
-                    eprintln!("Error: Unknown subcommand '{}'", subcommand);
-                    eprintln!("Usage: {} count <records|parts|sbins|hbins> <stdf_file>", args[0]);
-                    process::exit(1);
+                    // Generic count: stdf count [record_types...] <path> [-r]
+                    // Check if last arg is -r
+                    let has_recursive = args.len() >= 4 && args[args.len() - 1] == "-r";
+                    let path_index = if has_recursive { args.len() - 2 } else { args.len() - 1 };
+                    let path = &args[path_index];
+                    
+                    let record_types: Vec<String> = args[2..path_index]
+                        .iter()
+                        .map(|s| s.to_uppercase())
+                        .collect();
+                    
+                    // Validate all record types if specified
+                    for rt in &record_types {
+                        if get_record_type_codes(rt).is_none() {
+                            eprintln!("Error: Unknown record type '{}'", rt);
+                            eprintln!("Available records:");
+                            eprintln!("FAR, ATR, MIR, MRR, PCR, HBR, SBR, PMR, PGR, PLR, RDR, SDR,");
+                            eprintln!("WIR, WRR, WCR, PIR, PRR, TSR, PTR, MPR, FTR, BPS, EPS, GDR, DTR");
+                            process::exit(1);
+                        }
+                    }
+                    
+                    let mode = if record_types.is_empty() {
+                        CountMode::All
+                    } else {
+                        CountMode::Specific(record_types)
+                    };
+                    
+                    handle_count_for_path(path, has_recursive, mode);
                 }
             }
         }
@@ -410,16 +458,29 @@ fn print_usage(program: &str) {
     println!("Version: {}", env!("CARGO_PKG_VERSION"));
     println!("\nUsage: {} <command> [args...]", program);
     println!("\nCommands:");
-    println!("  count records <file>        - Count total number of records");
-    println!("  count parts <file>          - Count number of parts tested (not yet implemented)");
-    println!("  count parts unique <file>   - Count unique parts excluding retests (not yet implemented)");
-    println!("  count sbins <file>          - Count number of soft bins (not yet implemented)");
-    println!("  count hbins <file>          - Count number of hard bins (not yet implemented)");
-    println!("  tally records <file>        - Show tally of each record type (not yet implemented)");
+    println!("  count [record_types...] <path> [-r]");
+    println!("                              - Count records (all if none specified, or specific types)");
+    println!("                                Example: count file.std");
+    println!("                                Example: count PTR FTR file.std");
+    println!("                                Example: count directory -r");
+    println!("  count records <path> [-r]   - Count total number of records (same as count <path>)");
+    println!("  count parts <path> [-r]     - Count parts with crash detection (returns decimal if incomplete)");
+    println!("  count parts unique <path>   - Count unique parts excluding retests (not yet implemented)");
+    println!("  count tests <path> [-r]     - Count test records (PTR + FTR + MPR)");
+    println!("  count wafers <path> [-r]    - Count wafers with crash detection (returns decimal if incomplete)");
+    println!("  count sbins <path>          - Count number of soft bins (not yet implemented)");
+    println!("  count hbins <path>          - Count number of hard bins (not yet implemented)");
+    println!("  tally records <file>        - Show tally of each record type");
     println!("  tally heads <file>          - Show tally of test heads (not yet implemented)");
     println!("  tally sites <file>          - Show tally of sites (not yet implemented)");
     println!("  tally hbins <file>          - Show tally of hard bins (not yet implemented)");
     println!("  tally sbins <file>          - Show tally of soft bins (not yet implemented)");
+    println!("  show <RECORD> <FIELD> <file> [-limit]");
+    println!("                              - Display field value(s) from specified record type");
+    println!("                                Example: show MIR LOT_ID file.std");
+    println!("                                Example: show PRR SITE_NUM file.std -10");
+    println!("  show <RECORD> fields <file> - List all available fields for record type");
+    println!("                                Example: show PTR fields file.std");
     println!("  dump <file>                 - Dump all records");
     println!("  dump <record_types...> <file> - Dump specific record types");
     println!("                                  Example: dump MIR PRR file.std");
@@ -431,10 +492,9 @@ fn print_usage(program: &str) {
     println!("                                               complete: ends with MRR record");
     println!("                                               (exit 0=match, 1=no match, 2=error)");
     println!("  endian <file>               - Get file endianness (outputs: LE or BE)");
-    println!("  lot <file>                  - Get lot ID from MIR record");
-    println!("  tester [type] <file>        - Get tester name (NODE_NAM) from MIR record");
-    println!("                                  type: get tester type (TSTR_TYP) instead");
-    println!("  temperature [int] <file>    - Get test temperature from MIR record");
+    println!("  lot <file>                  - Get lot ID (shortcut: show MIR LOT_ID)");
+    println!("  tester [type] <file>        - Get tester name/type (shortcut: show MIR NODE_NAM|TSTR_TYP)");
+    println!("  temperature [int] <file>    - Get test temperature (shortcut: show MIR TEST_TMP)");
     println!("                                  int: parse as integer value");
     println!("  to <format> [-f] <file>     - Convert STDF file to another format");
     println!("                                  Formats: xlsx, atdf, hdf5");
@@ -449,6 +509,141 @@ fn count_records(filename: &str) -> Result<(), std::io::Error> {
     let count = parser.count_records(filename)?;
     println!("{}", count);
     Ok(())
+}
+
+fn count_all_records(filename: &str) -> Result<usize, std::io::Error> {
+    use stdf::StdfRecordIterator;
+    
+    let iter = StdfRecordIterator::new(filename)?;
+    let mut count = 0;
+    
+    for result in iter {
+        let _ = result?; // Just verify the record is readable
+        count += 1;
+    }
+    
+    Ok(count)
+}
+
+fn count_specific_records(filename: &str, record_types: &[String]) -> Result<usize, std::io::Error> {
+    use stdf::StdfRecordIterator;
+    
+    // Get the target record type codes for fast filtering
+    let mut target_codes: Vec<(u8, u8)> = Vec::new();
+    for rt in record_types {
+        if let Some(codes) = get_record_type_codes(rt) {
+            target_codes.push(codes);
+        }
+    }
+    
+    let iter = StdfRecordIterator::new(filename)?;
+    let mut count = 0;
+    
+    for result in iter {
+        let record_bytes = result?;
+        
+        // Quick check: see if this record matches any of our target types
+        if record_bytes.len() >= 4 {
+            let rec_typ = record_bytes[2];
+            let rec_sub = record_bytes[3];
+            
+            for &(target_typ, target_sub) in &target_codes {
+                if rec_typ == target_typ && rec_sub == target_sub {
+                    count += 1;
+                    break;
+                }
+            }
+        }
+    }
+    
+    Ok(count)
+}
+
+fn count_parts(filename: &str) -> Result<f64, std::io::Error> {
+    use stdf::StdfRecordIterator;
+    
+    let iter = StdfRecordIterator::new(filename)?;
+    let mut pir_count = 0;
+    let mut prr_count = 0;
+    
+    // PIR codes: REC_TYP=5, REC_SUB=10
+    // PRR codes: REC_TYP=5, REC_SUB=20
+    
+    for result in iter {
+        let record_bytes = result?;
+        
+        if record_bytes.len() >= 4 {
+            let rec_typ = record_bytes[2];
+            let rec_sub = record_bytes[3];
+            
+            if rec_typ == 5 {
+                if rec_sub == 10 {
+                    pir_count += 1;
+                } else if rec_sub == 20 {
+                    prr_count += 1;
+                }
+            }
+        }
+    }
+    
+    // Calculate remainder: Remainder = 1 / (PIRs - PRRs)
+    let diff = pir_count as i32 - prr_count as i32;
+    
+    if diff == 0 {
+        // Perfect match, no crash
+        Ok(pir_count as f64)
+    } else if diff > 0 {
+        // More PIRs than PRRs - system crashed during test
+        let remainder = 1.0 / (diff as f64);
+        Ok(pir_count as f64 + remainder)
+    } else {
+        // More PRRs than PIRs - this is unusual, data corruption?
+        // Return negative to indicate the issue
+        let remainder = 1.0 / (diff.abs() as f64);
+        Ok(pir_count as f64 - remainder)
+    }
+}
+
+fn count_wafers(filename: &str) -> Result<f64, std::io::Error> {
+    use stdf::StdfRecordIterator;
+    
+    let iter = StdfRecordIterator::new(filename)?;
+    let mut wir_count = 0;
+    let mut wrr_count = 0;
+    
+    // WIR codes: REC_TYP=2, REC_SUB=10
+    // WRR codes: REC_TYP=2, REC_SUB=20
+    
+    for result in iter {
+        let record_bytes = result?;
+        
+        if record_bytes.len() >= 4 {
+            let rec_typ = record_bytes[2];
+            let rec_sub = record_bytes[3];
+            
+            if rec_typ == 2 {
+                if rec_sub == 10 {
+                    wir_count += 1;
+                } else if rec_sub == 20 {
+                    wrr_count += 1;
+                }
+            }
+        }
+    }
+    
+    // Calculate difference: WIRs - WRRs
+    let diff = wir_count as i32 - wrr_count as i32;
+    
+    if diff == 0 {
+        // All wafers completed
+        Ok(wir_count as f64)
+    } else if diff == 1 {
+        // One incomplete wafer
+        Ok(wir_count as f64 + 0.5)
+    } else {
+        // Unexpected case - multiple incomplete wafers?
+        Ok(wir_count as f64 + 0.5)
+    }
 }
 
 fn tally_records(filename: &str) -> Result<(), std::io::Error> {
@@ -508,6 +703,95 @@ fn tally_records(filename: &str) -> Result<(), std::io::Error> {
     
     for (record_type, count) in sorted_types {
         println!("{}: {}", record_type, count);
+    }
+    
+    Ok(())
+}
+
+enum CountMode {
+    All,
+    Specific(Vec<String>),
+    Parts,
+    Wafers,
+}
+
+fn handle_count_for_path(path: &str, recursive: bool, mode: CountMode) {
+    use std::path::Path;
+    
+    let path_obj = Path::new(path);
+    
+    if path_obj.is_file() {
+        // Single file
+        match count_file(path, &mode) {
+            Ok(result) => println!("{}", result),
+            Err(e) => {
+                eprintln!("Error processing {}: {:?}", path, e);
+                process::exit(1);
+            }
+        }
+    } else if path_obj.is_dir() {
+        // Directory - process all STDF files
+        match process_directory(path, recursive, &mode) {
+            Ok(_) => {},
+            Err(e) => {
+                eprintln!("Error processing directory: {:?}", e);
+                process::exit(1);
+            }
+        }
+    } else {
+        eprintln!("Error: Path '{}' does not exist", path);
+        process::exit(1);
+    }
+}
+
+fn count_file(filename: &str, mode: &CountMode) -> Result<String, std::io::Error> {
+    match mode {
+        CountMode::All => {
+            let count = count_all_records(filename)?;
+            Ok(count.to_string())
+        }
+        CountMode::Specific(record_types) => {
+            let count = count_specific_records(filename, record_types)?;
+            Ok(count.to_string())
+        }
+        CountMode::Parts => {
+            let count = count_parts(filename)?;
+            Ok(format!("{}", count))
+        }
+        CountMode::Wafers => {
+            let count = count_wafers(filename)?;
+            Ok(format!("{}", count))
+        }
+    }
+}
+
+fn process_directory(dir_path: &str, recursive: bool, mode: &CountMode) -> Result<(), std::io::Error> {
+    use std::fs;
+    use std::path::Path;
+    
+    let entries = fs::read_dir(dir_path)?;
+    
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if path.is_file() {
+            // Check if it's likely an STDF file (common extensions)
+            if let Some(ext) = path.extension() {
+                let ext_str = ext.to_string_lossy().to_lowercase();
+                if ext_str == "std" || ext_str == "stdf" {
+                    let path_str = path.to_string_lossy();
+                    match count_file(&path_str, mode) {
+                        Ok(result) => println!("{} : {}", path_str, result),
+                        Err(e) => eprintln!("Error processing {}: {:?}", path_str, e),
+                    }
+                }
+            }
+        } else if path.is_dir() && recursive {
+            // Recursively process subdirectories
+            let subdir = path.to_string_lossy();
+            let _ = process_directory(&subdir, recursive, mode);
+        }
     }
     
     Ok(())
