@@ -1,8 +1,14 @@
 # Semi-ATE-stdf
 
+[![CI](https://github.com/Semi-ATE/STDF/actions/workflows/ci.yml/badge.svg)](https://github.com/Semi-ATE/STDF/actions/workflows/ci.yml)
+[![Coverage](https://github.com/Semi-ATE/STDF/actions/workflows/coverage.yml/badge.svg)](https://github.com/Semi-ATE/STDF/actions/workflows/coverage.yml)
+[![codecov](https://codecov.io/gh/Semi-ATE/STDF/branch/rust/graph/badge.svg)](https://codecov.io/gh/Semi-ATE/STDF)
 [![Crates.io](https://img.shields.io/crates/v/semi-ate-stdf.svg)](https://crates.io/crates/semi-ate-stdf)
+[![Documentation](https://docs.rs/semi-ate-stdf/badge.svg)](https://docs.rs/semi-ate-stdf)
 [![PyPI](https://img.shields.io/pypi/v/Semi-ATE-stdf.svg)](https://pypi.org/project/Semi-ATE-stdf/)
 [![Conda](https://img.shields.io/conda/v/conda-forge/semi-ate-stdf.svg)](https://anaconda.org/conda-forge/semi-ate-stdf)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A fast, modern implementation of the Standard Test Data Format (STDF) parser and writer in Rust, with Python bindings.
 
