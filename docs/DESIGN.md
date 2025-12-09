@@ -43,16 +43,60 @@
   - Field-level access
 
 #### 3. **parsers.rs** - Parsing Logic
-- `StdfParser`: Memory-mapped file wrapper using `memmap2` crate
-- `StdfRecordIterator`: Iterator over STDF records (returns raw bytes)
-- `StdfRecordFPIterator`: Iterator over STDF records with file pointers (returns tuple of bytes + offset)
-  - **Performance**: Identical to `StdfRecordIterator` (~906 MB/s on 3GB files)
-  - **Zero overhead**: File pointer is already tracked internally for iteration
-  - **Recommendation**: Use `StdfRecordFPIterator` for all new code
+
+**Iterator Implementations:**
+- `StdfRecordIterator`: Memory-mapped iterator (loads entire file into memory)
+  - **Performance**: ~906 MB/s on 3GB files
+  - **Best for**: Unlimited queries, full-file scans, multiple passes
+  - **Memory**: Maps entire file into virtual memory
+  
+- `StdfRecordFPIterator`: Memory-mapped iterator with file pointers
+  - Returns tuple of (bytes, offset) for each record
+  - **Performance**: Identical to `StdfRecordIterator` (zero overhead)
+  - **Recommendation**: Use for all new code needing offsets
+  
+- `StdfStreamingIterator`: Progressive file reader (NEW)
+  - **Performance**: 25ms for early records (FAR, MIR), 40ms for limited queries
+  - **Best for**: Early records, small limits (< 1000), large files
+  - **Memory**: 64KB buffer, minimal memory footprint
+  - **Strategy**: Reads file progressively, exits early when possible
+
+**Parsing Functions:**
 - `stdf_parse_record()`: Parses individual records from byte slices
 - `valid_file()`: Validates STDF file structure (starts with FAR, ends with MRR)
 - Handles both little-endian and big-endian files
 - Uses `byte` crate for efficient binary parsing
+
+**Performance Optimization Strategy:**
+
+The `show_field()` function intelligently routes queries based on record type and limit:
+
+1. **Early records** (FAR, ATR, MIR, RDR, SDR, WIR): Always use streaming
+   - These appear at file beginning, streaming finds them in ~25ms
+   
+2. **Late records** (MRR, PCR, HBR, SBR, WRR, TSR): Always use memory-mapped
+   - These appear at file end, memory-mapping is more efficient
+   
+3. **Middle records** (PMR, PGR, PLR, WCR, PIR, PRR, PTR, etc.): Adaptive
+   - Limit < 1000: Use streaming (40ms vs 1300ms for memory-mapped)
+   - No limit or limit ≥ 1000: Use memory-mapped (better for full scans)
+
+4. **Singleton records** (FAR, ATR, MIR, MRR, PCR, HBR, SBR): Auto-exit after first match
+   - These only occur once per file, no need to continue scanning
+
+**Early Exit Optimizations:**
+- Record type filtering: Check bytes[2:3] before parsing to skip unwanted records
+- Limit checking: Break immediately when requested count is reached
+- Singleton detection: Automatic early exit for records that only occur once
+
+**Benchmark Results (Native Windows, 35MB file):**
+- FAR STDF_VER (streaming, singleton): 287ms
+- MIR LOT_ID (streaming, singleton): 25ms (3rd record in file)
+- PRR SITE_NUM -10 (streaming, limited): 40ms
+- PRR SITE_NUM unlimited (memory-mapped): 1,285ms
+
+**Note on WSL Performance:**
+Testing showed ~4 second overhead when accessing Windows NTFS files from WSL due to cross-system file I/O. Native Windows or Linux shows true performance benefits.
 
 #### 4. **types.rs** - STDF Data Types
 - Implements STDF primitive types:
@@ -75,16 +119,49 @@
 ```
 STDF File (binary)
     ↓
-StdfParser (memory-mapped)
+Iterator Selection (based on query type)
+    ├─→ StdfStreamingIterator (early records, small limits)
+    │   └─→ 64KB buffer, progressive reading, early exit
+    │
+    └─→ StdfRecordIterator (late records, unlimited queries)
+        └─→ Memory-mapped, full file access
     ↓
-StdfRecordIterator (lazy parsing)
+Record Filtering (check bytes[2:3] for type match)
+    ↓
+stdf_parse_record() (parse matched records only)
     ↓
 V4 enum (typed records)
     ↓
-Operations (count, dump, convert, tally, etc.)
+Field Extraction
+    ↓
+Early Exit (limit reached or singleton found)
     ↓
 Output (stdout, files, exit codes)
 ```
+
+### Design Decisions
+
+**Why Two Iterator Types?**
+
+The choice between streaming and memory-mapped iteration depends on the access pattern:
+
+1. **Memory-Mapped (StdfRecordIterator)**
+   - **Pros**: Fast random access, no buffer management, OS-optimized caching
+   - **Cons**: Must map entire file, slower for queries that can exit early
+   - **Use when**: Need multiple passes, full file scan, or late records
+
+2. **Streaming (StdfStreamingIterator)**
+   - **Pros**: Low memory footprint, can exit early, fast for beginning of file
+   - **Cons**: Sequential only, buffer management overhead
+   - **Use when**: Early records, limited queries, very large files
+
+**Routing Logic Rationale:**
+
+The intelligent routing in `show_field()` was designed based on STDF file structure:
+- **File Structure**: FAR/ATR/MIR at beginning → Test records in middle → MRR/PCR/HBR at end
+- **Access Patterns**: Most queries are for either file-level info (MIR) or test data (PRR, PTR)
+- **Performance Trade-off**: 4-40ms (streaming) vs 1300ms (memory-mapped) for limited queries
+- **Memory Efficiency**: Streaming uses 64KB vs ~file size for memory-mapping
 
 ## CLI Commands
 

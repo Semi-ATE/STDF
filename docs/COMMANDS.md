@@ -2,7 +2,174 @@
 
 ## stdf show : single return value per file
 
+- stdf show endian `<file>` --> endian of the file
+
+    This will report the endian (BE/LE/?) of a given file.
+
+    ```bash
+    $ stdf show endian somefile.stdf
+    LE
+    ```
+
+- stdf show endian `<directory>` [-r]
+
+    This command will report the endian (BE/LE/?) of the files in the directory (and possibly sub dirs if -r is given)
+
+    ```bash
+    $ stdf show endian somedir
+    somedir/file1.std : LE
+    somedir/file2.std : LE
+    somedir/file3.stdf : BE
+    ...
+    ```
+
+    ```bash
+    $ stdf show endian somedir -r
+    somedir/file1.std : LE
+    somedir/file2.std : LE
+    somedir/file3.stdf : BE
+    somedir/otherdir/otherfile.stdf : LE
+    ...
+    ```
+
+- stdf show `<stdf_record>` `<field_name>` `<file>` [-n]
+
+    This command will display the field name of the given stdf record (s)
+
+    STDF V4 Records : Frequency Analysis
+        File Control Records (Once per file)
+            FAR (File Attributes Record) - 1× per file - Always first record
+            ATR (Audit Trail Record) - 0-1× per file - Optional, tracks file modifications
+            MIR (Master Information Record) - 1× per file - Test session info
+            MRR (Master Results Record) - 1× per file - Test session summary (last record if complete)
+        Per-Lot Setup Records (Once per lot)
+            PCR (Part Count Record) - 0-n× per file - One per test head/site group
+            HBR (Hardware Bin Record) - 0-n× per file - One per hardware bin used
+            SBR (Software Bin Record) - 0-n× per file - One per software bin used
+            PMR (Pin Map Record) - 0-n× per file - One per pin/channel defined
+            PGR (Pin Group Record) - 0-n× per file - One per pin group defined
+            PLR (Pin List Record) - 0-n× per file - Defines test program sequencing
+            RDR (Retest Data Record) - 0-n× per file - One per retest bin
+            SDR (Site Description Record) - 0-n× per file - One per test site configured
+        Per-Wafer Records (Wafer Sort only)
+            WIR (Wafer Information Record) - 0-n× per file - One per wafer start
+            WRR (Wafer Results Record) - 0-n× per file - One per wafer end (matches WIR)
+            WCR (Wafer Configuration Record) - 0-n× per file - One per wafer (optional)
+        Per-Part Records (Highest frequency - thousands to millions)
+            PIR (Part Information Record) - n× per file - One per part tested (start)
+            PRR (Part Results Record) - n× per file - One per part tested (end, matches PIR)
+        Per-Test Records (Very high frequency)
+            TSR (Test Synopsis Record) - 0-n× per file - One per unique test (summary)
+            PTR (Parametric Test Record) - n× per file - One per parametric measurement (millions possible)
+            MPR (Multiple-Result Parametric Record) - n× per file - One per multi-result parametric test
+            FTR (Functional Test Record) - n× per file - One per functional test execution
+        Program Execution Records (Optional)
+            BPS (Begin Program Section) - 0-n× per file - Marks test program section start
+            EPS (End Program Section) - 0-n× per file - Marks test program section end (matches BPS)
+        Generic Data Records (Vendor-specific)
+            GDR (Generic Data Record) - 0-n× per file - Vendor-specific data
+            DTR (Datalog Text Record) - 0-n× per file - Free-form text messages
+
+    The given stdf file can have zero or more of the indicated stdf records.
+    If -n is omitted, we will go through the whole file and try to find ALL.
+    the `n` is to be a number, so for example -1 or -5
+    It limits the number of record:field entries that will be displayed.
+    If more than 1 is selected, the response will be a comma separated list.
+    For the records that occure only once (FAR/MIR/MRR), we can stop after the record is found.
+
+    Both the `<stdf_record>` and `<field_name>` must be given in CAPITALS
+
+    ```bash
+    $ stdf show MIR USER_TXT somefile.stdf
+    F3N
+    ```
+
+    ```bash
+    $ stdf show PRR NUM_TEST somefile.stdf -10
+    511, 511, 511, 3, 511, 80, 511, 511, 73, 511
+    ```
+
+- stdf show `<stdf_record>` `<field_name>` `<directory>` [-n] [-r]
+
+    Same as above, but for all files in the given directory (or possibly also all subdirectories if `-r` is given)
+
+    ```bash
+    $ stdf show MIR USER_TXT somedir
+    somedir/file1.std : F3N
+    somedir/file2.std : F1N
+    somedir/file3.stdf : F2N
+    ...
+    ```
+
+    ```bash
+    $ stdf show MIR USER_TXT somedir -r
+    somedir/file1.std : F3N
+    somedir/file2.std : F1N
+    somedir/file3.stdf : F2N
+    somedir/otherdir/otherfile.stdf : F2N
+    ...
+    ```
+
+    ```bash
+    $ stdf show PRR SITE_NUM somedir -21
+    somedir/file1.std : 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 5, 6, 7, 8, 1, 2, 3, 4, 5, 7, 8
+    somedir/file2.std : 1, 1, 2, 3, 4, 1, 2, 4, 1, 2, 3, 1, 2, 3, 1, 3, 4, 1, 2, 3, 4
+    somedir/file3.stdf : 1, 2, 3, 4, 1
+    ...
+    ```
+
+    In the above and below example file2.stdf has less thant 21 PRR records, so we will display only the ones available.
+
+    ```bash
+    $ stdf show PRR SITE_NUM somedir -r -21
+    somedir/file1.std : 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 5, 6, 7, 8, 1, 2, 3, 4, 5, 7, 8
+    somedir/file2.std : 1, 1, 2, 3, 4, 1, 2, 4, 1, 2, 3, 1, 2, 3, 1, 3, 4, 1, 2, 3, 4
+    somedir/file3.stdf : 1, 2, 3, 4, 1
+    somedir/otherdir/otherfile.stdf : 1, 1, 1, 1, 2, 4, 1, 2, 4, 4, 2, 3, 1, 2, 3, 4, 1, 2, 3, 4, 1
+    ...
+    ```
+
+- stdf show temperature `<file>`
+
+    This is a convenience shortcut to `stdf show MIR TST_TEMP <file>` 
+
+    ```bash
+    $ stdf show temperature somefile.stdf
+    155
+    ```
+
+- stdf show temperature `<directory>` [-r]
+
+    This is a convenience shortcut to `stdf show MIR TST_TEMP <directory> [-r]`
+
+    ```bash
+    $ stdf show semperature somedir
+    somedir/file1.std : -40
+    somedir/file2.std : 155
+    somedir/file3.stdf : room
+    ...
+    ```
+
+    ```bash
+    $ stdf show temperature somedir -r
+    somedir/file1.std : -40
+    somedir/file2.std : 155
+    somedir/file3.stdf : room
+    somedir/otherdir/otherfile.stdf : 25
+    ...
+    ```
+
+- stdf show lot `<file>` --> MIR:LOT_ID
+
+    This is a convenience shortcut to `stdf show MIR LOT_ID <file>`
+
+- stdf show lot `<directory>` [-r]
+
+    This is a convenience shortcut to `stdf show MIR LOT_ID <directory> [-r]`
+
 - stdf show tester `<file>` --> MIR:NODE_NAM
+
+    This is a convenience shortcut to `stdf show MIR NODE_NAM`
 
     ```bash
     $ stdf show tester somefile.stdf
@@ -10,6 +177,8 @@
     ```
 
 - stdf show tester `<directory>` [-r] --> MIR:NODE_NAM for all stdf files in `<directory>`, and sub dirs if -r is given
+
+    This is a convenience shortcut to `stdf show MIR NODE_NAM <directory> [-r]`
 
     ```bash
     $ stdf show tester somedir
@@ -30,12 +199,16 @@
 
 - stdf show tester type `<file>` --> MIR:TSTR_TYP
 
+    This is a convenience shortcut to `stdf show MIR TSTR_TYP  <directory> [-r]`
+
     ```bash
     $ stdf show tester type somefile.stdf
     93000-SOC
     ```
 
-- stdf show tester type `<directory>` [-r] --> MIR:TSTR_TYP for all stdf files in `<directory>`, and sub dirs if -r is given 
+- stdf show tester type `<directory>` [-r] 
+
+    This is a convenience shortcut to `stdf show MIR TSTR_TYP <directory> [-r]`
 
     ```bash
     $ stdf show tester type somedir
@@ -54,63 +227,81 @@
     ...
     ```
 
-- stdf show endian `<file>` --> endian of the file
-
-    ```bash
-    $ stdf show endian somefile.stdf
-    LE
-    ```
-
-- stdf show endian `<directory>` [-r] --> endian of all stdf files in `<directory>`, and sub dirs if -r is given 
-
-    ```bash
-    $ stdf show endian somedir
-    somedir/file1.std : LE
-    somedir/file2.std : LE
-    somedir/file3.stdf : BE
-    ...
-    ```
-
-    ```bash
-    $ stdf show endian somedir -r
-    somedir/file1.std : LE
-    somedir/file2.std : LE
-    somedir/file3.stdf : BE
-    somedir/otherdir/otherfile.stdf : LE
-    ...
-    ```
-
-- stdf show temperature `<file>`
-
-- stdf show temperature `<directory>` [-r]
-- stdf show mir `<mir_field_name>` `<file>` 
-- stdf show mir `<mir_field_name>` `<directory>` [-r] --> 
-- stdf show mrr `<mrr_field_name>` `<file>`
-- stdf show mrr `<mrr_field_name>` `<directory>` [-r]
-- stdf show wcr `<wcr_field_name>` `<file>`
-- stdf show wcr `<wcr_field_name>` `<directroy>` [-r]
-- stdf show lot `<file>` --> MIR:LOT_ID
-- stdf show lot `<directory>` [-r] --> MIR:LOT_ID for all stdf files in `<directory>`, and sub dirs if -r is given
 - stdf show sublot `<file>` --> MIR:SBLOT_ID
-- stdf show sublot `<directory>` [-r] --> MIR:SBLOT_ID for all stdf files in `<directory>`, and sub dirs if -r is given
-- stdf show device `<file>` --> MIR:PART_TYP
-- stdf show device `<directory>` [-r] --> MIR:PART_TYP for all stdf files in `<directory>`, and sub dirs if -r is given
+
+    This is a convenience shortcut to `stdf show MIR SBLOT_ID <file>`
+
+- stdf show sublot `<directory>` [-r]
+
+    This is a convenience shortcut to `stdf show MIR SBLOT_ID <directory> [-r]` 
+
+- stdf show device `<file>`
+
+    This is a convenience shortcut to `stdf show MIR PART_TYP <file>`
+
+- stdf show device `<directory>` [-r]
+
+    This is a convenience shortcut to `stdf show MIR PART_TYP <directory> [-r]`
+
 - stdf show version `<file>` --> FAR:STDF_VER
-- stdf show version `<directory>` [-r] --> FAR:STDF_VER for all stdf files in `<directory>`, and sub dirs if -r is given
+
+    This is a convenience shortcut to `stdf show FAR STDF_VER`
+
+    TODO: this one needs work later on to also support the 2007 extension
+
+- stdf show version `<directory>` [-r]
+
+    This is a convenience shortcut to `stdf show FAR STDF_VER <directory> [-r]`
+
+    TODO: this one needs work later on to also support the 2007 extension
+
+- stdf show records
+
+    This command shows all records.
+
+    TODO: later when we also support the 2007 extension we need to revisit this point.
+
+
+- stdf show `<stdf_record>` fields
+
+    This command will show all the fields of the supplied stdf record (singular)
+
+- stdf show supported compressions
+
+    This will just list the supported compression algorithms
+
+    ```bash
+    $ stdf show supported compressions
+    gzip/zlib : .gz, .z
+    bzip2 : .bz2
+    xz/LZMA : .xz
+    zstd : .zst (default)
+    lz4 : .lz4
+    zip : .zip (Archive format)
+    tar : .tar (Archive format)
+    ```
 
 ## stdf dump
 
-- stdf dump `<list of record types>` `<file>`
+- stdf dump [`<list of stdf_records>`] `<file>`
+
+    If the list of stdf_records is empty, we mean ALL records.
+    First we iterate trough the list of stdf_records and verify that all given names are valid STDF records (use is_record function in records.rs) 
+    Then we will iterate (StdfRecordIterator) trough the file, instantiate each record and print it (Display)
 
 ## stdf count (single return value per file)
 - stdf count records `<file>`
 - stdf count records `<directory>` [-r]
+
 - stdf count parts `<file>`
 - stdf count parts `<directory>` [-r]
+
 - stdf count tests `<file>`
 - stdf count tests `<directory>` [-r]
+
 - stdf count wafers `<file>`
 - stdf count wafers `<directory>` [-r]
+
 - stdf count `<record_type>` `<file>`
 - stdf count `<record_type>` `<directory>` [-r]
 
@@ -173,6 +364,8 @@
 - stdf tally sites `<directory>` [-r]
     Same as above, but fo rall files in directory and optionaly all sub dirs if -r is given.
 
+
+
 - stdf tally sbins
 
 
@@ -198,12 +391,16 @@
 
 ## stdf is
 
-- stdf is ft `<file>` --> true if file doesn't contain a WIR
+- stdf is ft `<file>`
+
+
+
+ --> true if file doesn't contain a WIR
 - stdf is ws `<file>` --> true if file contains a WIR
 - stdf is hot `<file>` --> true if test temperature is avove 50*C
 - stdf is cold `<file>` --> true if test temperature is below 10*C
 - stdf is room `<file>` --> true if test temperature is between 10 and 50*C
-- stdf is binary `<file>` --> true if the given file is written in STDF
+- stdf is binary `<file>` --> true if the given file is written in STDF (if an endian could be detected)
 - stdf is ascii `<file>` --> true if the given file is written in ATDF
 - stdf is complete `<file>` --> true if last recore is MRR
 - stdf is truncated `<file>` --> true if last record is not MRR
@@ -225,6 +422,10 @@
 # stdf has
 
 - stdf has `<record_type>` `<file>`
+
+    This command will search trough `<file>` to find the occurance of the given `<>`
+
+
 - stdf has `<record_type>` `<directory>` [-r]
 - stdf has complient name `<file>`
 - stdf has complient name `<directory>` [-r]
@@ -291,3 +492,8 @@ Access to the tester hardware is (or should be) implemented via a singleton, the
     - ft 
 
 # atdf
+
+
+
+
+

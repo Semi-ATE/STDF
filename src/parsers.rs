@@ -860,3 +860,177 @@ pub fn atdf_parse_record(atdf_line: &str) -> Result<V4<'static>, Error> {
         format!("ATDF parsing for record type '{}' not yet implemented", record_type)
     ))
 }
+
+/// Streaming iterator that reads STDF records from a file without loading entire file into memory
+/// This is more efficient for large files when you only need to read a few records from the beginning
+pub struct StdfStreamingIterator {
+    file: File,
+    buffer: Vec<u8>,
+    buffer_pos: usize,
+    buffer_len: usize,
+    endian: byte::ctx::Endian,
+    eof_reached: bool,
+}
+
+impl StdfStreamingIterator {
+    const BUFFER_SIZE: usize = 64 * 1024; // 64KB buffer
+    
+    /// Create a new streaming iterator from a file path
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let mut file = File::open(path)?;
+        
+        // Read initial buffer to detect endianness
+        let mut initial_buffer = vec![0u8; 16]; // Enough for FAR record
+        let bytes_read = file.read(&mut initial_buffer)?;
+        if bytes_read < 6 {
+            return Err(Error::new(ErrorKind::UnexpectedEof, "File too small to be valid STDF"));
+        }
+        
+        let endian = Header::detect_endian(&initial_buffer)
+            .map_err(|e| Error::new(ErrorKind::Other, format!("{:?}", e)))?;
+        
+        // Reset file to beginning
+        file.seek(SeekFrom::Start(0))?;
+        
+        // Create larger buffer for streaming
+        let mut buffer = vec![0u8; Self::BUFFER_SIZE];
+        let buffer_len = file.read(&mut buffer)?;
+        
+        Ok(StdfStreamingIterator {
+            file,
+            buffer,
+            buffer_pos: 0,
+            buffer_len,
+            endian,
+            eof_reached: buffer_len == 0,
+        })
+    }
+    
+    /// Get the endianness of the STDF file
+    pub fn endian(&self) -> byte::ctx::Endian {
+        self.endian
+    }
+    
+    /// Refill buffer from file
+    fn refill_buffer(&mut self) -> Result<(), Error> {
+        if self.eof_reached {
+            return Ok(());
+        }
+        
+        // Move remaining bytes to front of buffer
+        if self.buffer_pos < self.buffer_len {
+            let remaining = self.buffer_len - self.buffer_pos;
+            self.buffer.copy_within(self.buffer_pos..self.buffer_len, 0);
+            self.buffer_len = remaining;
+            self.buffer_pos = 0;
+        } else {
+            self.buffer_len = 0;
+            self.buffer_pos = 0;
+        }
+        
+        // Read more data from file
+        let bytes_read = self.file.read(&mut self.buffer[self.buffer_len..])?;
+        self.buffer_len += bytes_read;
+        
+        if bytes_read == 0 {
+            self.eof_reached = true;
+        }
+        
+        Ok(())
+    }
+}
+
+impl Iterator for StdfStreamingIterator {
+    type Item = Result<Vec<u8>, Error>;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.buffer_pos >= self.buffer_len && self.eof_reached {
+            return None;
+        }
+        
+        // Ensure we have enough data for a header (at least 4 bytes)
+        if self.buffer_len - self.buffer_pos < 4 {
+            if let Err(e) = self.refill_buffer() {
+                return Some(Err(e));
+            }
+            if self.buffer_pos >= self.buffer_len {
+                return None;
+            }
+        }
+        
+        let start_pos = self.buffer_pos;
+        
+        // Read the header
+        let header_result = self.buffer[..self.buffer_len]
+            .read_with::<Header>(&mut self.buffer_pos, self.endian);
+        
+        match header_result {
+            Ok(header) => {
+                let record_length = header.rec_len.0 as usize;
+                let header_size = self.buffer_pos - start_pos;
+                let total_size = header_size + record_length;
+                
+                // Check if we need to refill buffer to get complete record
+                if start_pos + total_size > self.buffer_len && !self.eof_reached {
+                    self.buffer_pos = start_pos; // Reset position before refill
+                    if let Err(e) = self.refill_buffer() {
+                        return Some(Err(e));
+                    }
+                    
+                    // After refill, start_pos is now 0, re-read header
+                    self.buffer_pos = 0;
+                    let header_result2 = self.buffer[..self.buffer_len]
+                        .read_with::<Header>(&mut self.buffer_pos, self.endian);
+                    
+                    let header2 = match header_result2 {
+                        Ok(h) => h,
+                        Err(e) => {
+                            return Some(Err(Error::new(
+                                ErrorKind::InvalidData,
+                                format!("Failed to re-read header after buffer refill: {:?}", e)
+                            )));
+                        }
+                    };
+                    
+                    let record_length2 = header2.rec_len.0 as usize;
+                    let header_size2 = self.buffer_pos;
+                    let total_size2 = header_size2 + record_length2;
+                    
+                    // Check if we have enough data after refill
+                    if total_size2 > self.buffer_len {
+                        return Some(Err(Error::new(
+                            ErrorKind::UnexpectedEof,
+                            format!("Record too large for buffer: {} bytes", total_size2)
+                        )));
+                    }
+                    
+                    // Extract the complete record
+                    let record_bytes = self.buffer[0..total_size2].to_vec();
+                    self.buffer_pos = total_size2;
+                    return Some(Ok(record_bytes));
+                }
+                
+                // Check if we have enough data for complete record (no refill needed)
+                if start_pos + total_size > self.buffer_len {
+                    return Some(Err(Error::new(
+                        ErrorKind::UnexpectedEof,
+                        format!("Incomplete record at offset {}", start_pos)
+                    )));
+                }
+                
+                // Extract the complete record
+                let record_bytes = self.buffer[start_pos..start_pos + total_size].to_vec();
+                self.buffer_pos = start_pos + total_size;
+                
+                Some(Ok(record_bytes))
+            },
+            Err(byte::Error::BadOffset(_)) => {
+                None  // End of file
+            },
+            Err(e) => Some(Err(Error::new(
+                ErrorKind::Other,
+                format!("Error reading header: {:?}", e)
+            ))),
+        }
+    }
+}

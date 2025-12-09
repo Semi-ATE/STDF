@@ -388,6 +388,15 @@ fn main() {
                 }
             }
         }
+        "show" => {
+            if args.len() < 3 {
+                eprintln!("Error: Missing arguments");
+                eprintln!("Usage: {} show <subcommand> [args...]", args[0]);
+                process::exit(1);
+            }
+            
+            handle_show_command(&args);
+        }
         _ => {
             eprintln!("Unknown command: {}", command);
             print_usage(&args[0]);
@@ -591,8 +600,8 @@ fn check_is_complete(filename: &str) -> Result<bool, std::io::Error> {
 }
 
 fn get_lot_id(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
-    let iter = StdfRecordIterator::new(filename)?;
+    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
     for result in iter {
@@ -613,8 +622,8 @@ fn get_lot_id(filename: &str) -> Result<String, std::io::Error> {
 }
 
 fn get_tester(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
-    let iter = StdfRecordIterator::new(filename)?;
+    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
     for result in iter {
@@ -635,8 +644,8 @@ fn get_tester(filename: &str) -> Result<String, std::io::Error> {
 }
 
 fn get_tester_type(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
-    let iter = StdfRecordIterator::new(filename)?;
+    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
     for result in iter {
@@ -722,8 +731,8 @@ fn parse_temperature_as_int(temp_str: &str) -> Result<i32, String> {
 }
 
 fn get_temperature(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
-    let iter = StdfRecordIterator::new(filename)?;
+    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
     for result in iter {
@@ -824,4 +833,438 @@ fn convert_to_atdf(filename: &str, force: bool) -> Result<String, std::io::Error
     }
     
     Ok(output_path.to_string_lossy().to_string())
+}
+
+fn handle_show_command(args: &[String]) {
+    let subcommand = &args[2];
+    
+    match subcommand.to_uppercase().as_str() {
+        "ENDIAN" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument");
+                eprintln!("Usage: {} show endian <file>", args[0]);
+                process::exit(1);
+            }
+            let filename = &args[3];
+            match get_endian(filename) {
+                Ok(endian) => println!("{}", endian),
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "TEMPERATURE" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument");
+                eprintln!("Usage: {} show temperature <file>", args[0]);
+                process::exit(1);
+            }
+            let filename = &args[3];
+            match get_temperature(filename) {
+                Ok(temp) => println!("{}", temp),
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "LOT" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument");
+                eprintln!("Usage: {} show lot <file>", args[0]);
+                process::exit(1);
+            }
+            let filename = &args[3];
+            match get_lot_id(filename) {
+                Ok(lot_id) => println!("{}", lot_id),
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "TESTER" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument or 'type' keyword");
+                eprintln!("Usage: {} show tester <file> or {} show tester type <file>", args[0], args[0]);
+                process::exit(1);
+            }
+            
+            if args.len() >= 5 && args[3].to_uppercase() == "TYPE" {
+                let filename = &args[4];
+                match get_tester_type(filename) {
+                    Ok(tester_type) => println!("{}", tester_type),
+                    Err(e) => {
+                        eprintln!("Error: {:?}", e);
+                        process::exit(1);
+                    }
+                }
+            } else {
+                let filename = &args[3];
+                match get_tester(filename) {
+                    Ok(tester) => println!("{}", tester),
+                    Err(e) => {
+                        eprintln!("Error: {:?}", e);
+                        process::exit(1);
+                    }
+                }
+            }
+        }
+        "SUBLOT" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument");
+                eprintln!("Usage: {} show sublot <file>", args[0]);
+                process::exit(1);
+            }
+            let filename = &args[3];
+            match show_field("MIR", "SBLOT_ID", filename, None) {
+                Ok(values) => {
+                    if let Some(value) = values.first() {
+                        println!("{}", value);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "DEVICE" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument");
+                eprintln!("Usage: {} show device <file>", args[0]);
+                process::exit(1);
+            }
+            let filename = &args[3];
+            match show_field("MIR", "PART_TYP", filename, None) {
+                Ok(values) => {
+                    if let Some(value) = values.first() {
+                        println!("{}", value);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "VERSION" => {
+            if args.len() < 4 {
+                eprintln!("Error: Missing file argument");
+                eprintln!("Usage: {} show version <file>", args[0]);
+                process::exit(1);
+            }
+            let filename = &args[3];
+            match show_field("FAR", "STDF_VER", filename, None) {
+                Ok(values) => {
+                    if let Some(value) = values.first() {
+                        println!("{}", value);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "RECORDS" => {
+            println!("FAR\nATR\nMIR\nMRR\nPCR\nHBR\nSBR\nPMR\nPGR\nPLR\nRDR\nSDR\nWIR\nWRR\nWCR\nPIR\nPRR\nTSR\nPTR\nMPR\nFTR\nBPS\nEPS\nGDR\nDTR");
+        }
+        "SUPPORTED" => {
+            if args.len() >= 4 && args[3].to_uppercase() == "COMPRESSIONS" {
+                println!("gzip/zlib : .gz, .z");
+                println!("bzip2 : .bz2");
+                println!("xz/LZMA : .xz");
+                println!("zstd : .zst (default)");
+                println!("lz4 : .lz4");
+                println!("zip : .zip (Archive format)");
+                println!("tar : .tar (Archive format)");
+            } else {
+                eprintln!("Error: Unknown 'show supported' subcommand");
+                eprintln!("Usage: {} show supported compressions", args[0]);
+                process::exit(1);
+            }
+        }
+        _ => {
+            // Check if it's a generic record/field query
+            if args.len() >= 4 {
+                let record_type = &args[2];
+                
+                // Check if it's "show <RECORD> fields"
+                if args.len() == 4 && args[3].to_uppercase() == "FIELDS" {
+                    match get_record_fields(record_type) {
+                        Ok(fields) => {
+                            for field in fields {
+                                println!("{}", field);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            process::exit(1);
+                        }
+                    }
+                    return;
+                }
+                
+                // Otherwise it's: show <RECORD> <FIELD> <file> [-n]
+                if args.len() >= 5 {
+                    let field_name = &args[3];
+                    let filename = &args[4];
+                    let limit = if args.len() >= 6 && args[5].starts_with('-') {
+                        match args[5][1..].parse::<i32>() {
+                            Ok(n) => Some(n),
+                            Err(_) => {
+                                eprintln!("Error: Invalid limit value '{}'", args[5]);
+                                process::exit(1);
+                            }
+                        }
+                    } else {
+                        None
+                    };
+                    
+                    match show_field(record_type, field_name, filename, limit) {
+                        Ok(values) => {
+                            if values.is_empty() {
+                                // Record type not found
+                            } else if values.len() == 1 {
+                                println!("{}", values[0]);
+                            } else {
+                                println!("{}", values.join(", "));
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {:?}", e);
+                            process::exit(1);
+                        }
+                    }
+                } else {
+                    eprintln!("Error: Invalid 'show' command");
+                    eprintln!("Usage: {} show <RECORD> fields | {} show <RECORD> <FIELD> <file> [-n]", args[0], args[0]);
+                    process::exit(1);
+                }
+            } else {
+                eprintln!("Error: Invalid 'show' command");
+                eprintln!("Usage: {} show <subcommand> [args...]", args[0]);
+                process::exit(1);
+            }
+        }
+    }
+}
+
+fn get_record_type_codes(record_type: &str) -> Option<(u8, u8)> {
+    match record_type.to_uppercase().as_str() {
+        "FAR" => Some((0, 10)),
+        "ATR" => Some((0, 20)),
+        "MIR" => Some((1, 10)),
+        "MRR" => Some((1, 20)),
+        "PCR" => Some((1, 30)),
+        "HBR" => Some((1, 40)),
+        "SBR" => Some((1, 50)),
+        "PMR" => Some((1, 60)),
+        "PGR" => Some((1, 62)),
+        "PLR" => Some((1, 63)),
+        "RDR" => Some((1, 70)),
+        "SDR" => Some((1, 80)),
+        "WIR" => Some((2, 10)),
+        "WRR" => Some((2, 20)),
+        "WCR" => Some((2, 30)),
+        "PIR" => Some((5, 10)),
+        "PRR" => Some((5, 20)),
+        "TSR" => Some((10, 30)),
+        "PTR" => Some((15, 10)),
+        "MPR" => Some((15, 15)),
+        "FTR" => Some((15, 20)),
+        "BPS" => Some((20, 10)),
+        "EPS" => Some((20, 20)),
+        "GDR" => Some((50, 10)),
+        "DTR" => Some((50, 30)),
+        _ => None,
+    }
+}
+
+fn show_field(record_type: &str, field_name: &str, filename: &str, limit: Option<i32>) -> Result<Vec<String>, std::io::Error> {
+    use stdf::{StdfRecordIterator, StdfStreamingIterator, stdf_parse_record, V4};
+    
+    let mut results = Vec::new();
+    let count_limit = limit.map(|n| n.abs() as usize);
+    
+    // Get the record type codes (REC_TYP, REC_SUB)
+    let (target_rec_typ, target_rec_sub) = match get_record_type_codes(record_type) {
+        Some(codes) => codes,
+        None => {
+            eprintln!("Error: Unknown record type '{}'. Available records:", record_type);
+            eprintln!("FAR, ATR, MIR, MRR, PCR, HBR, SBR, PMR, PGR, PLR, RDR, SDR,");
+            eprintln!("WIR, WRR, WCR, PIR, PRR, TSR, PTR, MPR, FTR, BPS, EPS, GDR, DTR");
+            process::exit(1);
+        }
+    };
+    
+    // Determine optimal iteration strategy based on record location in file
+    let record_name = record_type.to_uppercase();
+    
+    // Records that only occur once per file (singleton records)
+    let is_singleton = matches!(record_name.as_str(), "FAR" | "ATR" | "MIR" | "MRR" | "PCR" | "HBR" | "SBR");
+    let use_streaming = match record_name.as_str() {
+        // Near beginning of file -> Always use streaming
+        "FAR" | "ATR" | "MIR" | "RDR" | "SDR" | "WIR" => true,
+        
+        // Near end of file -> Always use memory-mapped
+        "MRR" | "PCR" | "HBR" | "SBR" | "WRR" | "TSR" => false,
+        
+        // Middle of file -> Use streaming if small limit, memory-mapped otherwise
+        "PMR" | "PGR" | "PLR" | "WCR" | "PIR" | "PRR" | "PTR" | "MPR" | "FTR" | "BPS" | "EPS" | "GDR" | "DTR" => {
+            // Use streaming for small limits (< 1000 records) to avoid loading entire file
+            count_limit.map_or(false, |n| n < 1000)
+        }
+        
+        _ => false, // Default to memory-mapped for unknown types
+    };
+    
+    if use_streaming {
+        let iter = StdfStreamingIterator::new(filename)?;
+        let endian = iter.endian();
+        
+        for result in iter {
+            let record_bytes = result?;
+            
+            // Quick check: skip parsing if this isn't the record type we're looking for
+            if record_bytes.len() >= 4 {
+                let rec_typ = record_bytes[2];
+                let rec_sub = record_bytes[3];
+                
+                if rec_typ != target_rec_typ || rec_sub != target_rec_sub {
+                    continue;
+                }
+            }
+            
+            // Parse and extract field
+            match stdf_parse_record(&record_bytes, endian) {
+                Ok(record) => {
+                    if let Some(value) = extract_field_value(&record, field_name) {
+                        results.push(value);
+                        
+                        // Break early if we've reached the limit OR if this is a singleton record
+                        if is_singleton || (count_limit.is_some() && results.len() >= count_limit.unwrap()) {
+                            break;
+                        }
+                    }
+                }
+                Err(e) => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("Failed to parse record: {:?}", e)
+                    ));
+                }
+            }
+        }
+    } else {
+        // Use memory-mapped iterator for large scans
+        let iter = StdfRecordIterator::new(filename)?;
+        let endian = iter.endian();
+    
+    for result in iter {
+        let record_bytes = result?;
+        
+        // Quick check: skip parsing if this isn't the record type we're looking for
+        // Bytes [2] and [3] contain REC_TYP and REC_SUB
+        if record_bytes.len() >= 4 {
+            let rec_typ = record_bytes[2];
+            let rec_sub = record_bytes[3];
+            
+            if rec_typ != target_rec_typ || rec_sub != target_rec_sub {
+                continue; // Skip this record without parsing
+            }
+        }
+        
+        // Only parse records that match our target type (already filtered above)
+        match stdf_parse_record(&record_bytes, endian) {
+            Ok(record) => {
+                // Extract the field value
+                if let Some(value) = extract_field_value(&record, field_name) {
+                    results.push(value);
+                    
+                    // Check if we should stop (limit reached OR singleton record found)
+                    if is_singleton || (count_limit.is_some() && results.len() >= count_limit.unwrap()) {
+                        break;
+                    }
+                }
+            }
+            Err(e) => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Failed to parse record: {:?}", e)
+                ));
+            }
+        }
+    }
+    }  // Close the else block
+    
+    Ok(results)
+}
+
+fn extract_field_value(record: &stdf::V4, field_name: &str) -> Option<String> {
+    use stdf::V4;
+    
+    match record {
+        V4::MIR(mir) => {
+            match field_name.to_uppercase().as_str() {
+                "LOT_ID" => Some(format!("{}", mir.lot_id)),
+                "PART_TYP" => Some(format!("{}", mir.part_typ)),
+                "NODE_NAM" => Some(format!("{}", mir.node_nam)),
+                "TSTR_TYP" => Some(format!("{}", mir.tstr_typ)),
+                "TST_TEMP" => Some(format!("{}", mir.tst_temp)),
+                "SBLOT_ID" => Some(format!("{}", mir.sblot_id)),
+                "USER_TXT" => Some(format!("{}", mir.user_txt)),
+                _ => None,
+            }
+        }
+        V4::FAR(far) => {
+            match field_name.to_uppercase().as_str() {
+                "STDF_VER" => Some(format!("{}", far.stdf_ver)),
+                "CPU_TYPE" => Some(format!("{}", far.cpu_type)),
+                _ => None,
+            }
+        }
+        V4::PRR(prr) => {
+            match field_name.to_uppercase().as_str() {
+                "HEAD_NUM" => Some(format!("{}", prr.head_num)),
+                "SITE_NUM" => Some(format!("{}", prr.site_num)),
+                "NUM_TEST" => Some(format!("{}", prr.num_test)),
+                "HARD_BIN" => Some(format!("{}", prr.hard_bin)),
+                "SOFT_BIN" => Some(format!("{}", prr.soft_bin)),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn get_record_fields(record_type: &str) -> Result<Vec<String>, String> {
+    match record_type.to_uppercase().as_str() {
+        "FAR" => Ok(vec!["CPU_TYPE".to_string(), "STDF_VER".to_string()]),
+        "MIR" => Ok(vec![
+            "SETUP_T".to_string(), "START_T".to_string(), "STAT_NUM".to_string(), 
+            "MODE_COD".to_string(), "RTST_COD".to_string(), "PROT_COD".to_string(),
+            "BURN_TIM".to_string(), "CMOD_COD".to_string(), "LOT_ID".to_string(),
+            "PART_TYP".to_string(), "NODE_NAM".to_string(), "TSTR_TYP".to_string(),
+            "JOB_NAM".to_string(), "JOB_REV".to_string(), "SBLOT_ID".to_string(),
+            "OPER_NAM".to_string(), "EXEC_TYP".to_string(), "EXEC_VER".to_string(),
+            "TEST_COD".to_string(), "TST_TEMP".to_string(), "USER_TXT".to_string(),
+            "AUX_FILE".to_string(), "PKG_TYP".to_string(), "FAMLY_ID".to_string(),
+            "DATE_COD".to_string(), "FACIL_ID".to_string(), "FLOOR_ID".to_string(),
+            "PROC_ID".to_string(), "OPER_FRQ".to_string(), "SPEC_NAM".to_string(),
+            "SPEC_VER".to_string(), "FLOW_ID".to_string(), "SETUP_ID".to_string(),
+            "DSGN_REV".to_string(), "ENG_ID".to_string(), "ROM_COD".to_string(),
+            "SERL_NUM".to_string(), "SUPR_NAM".to_string(),
+        ]),
+        "PRR" => Ok(vec![
+            "HEAD_NUM".to_string(), "SITE_NUM".to_string(), "PART_FLG".to_string(),
+            "NUM_TEST".to_string(), "HARD_BIN".to_string(), "SOFT_BIN".to_string(),
+            "X_COORD".to_string(), "Y_COORD".to_string(), "TEST_T".to_string(),
+            "PART_ID".to_string(), "PART_TXT".to_string(), "PART_FIX".to_string(),
+        ]),
+        // Add more record types as needed
+        _ => Err(format!("Fields for record type '{}' not yet implemented. Use 'show records' to see all available record types.", record_type)),
+    }
 }
