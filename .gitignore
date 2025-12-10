@@ -47,7 +47,9 @@ htmlcov/
 .tox/
 lcov.info
 
-# Data files (keep only compressed versions)
+# Data files - pool directory contains decompressed test files
+data/pool/
+data/pool/
 data/**/*.std
 data/**/*.stdf
 data/**/*.atd
