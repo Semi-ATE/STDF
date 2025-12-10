@@ -6,27 +6,41 @@ use crate::types::*;
 
 // Macro to implement Display for record types
 macro_rules! impl_display {
-    ($name:ident, $desc:expr, $($field:ident),* $(,)?) => {
+    // Version with field defaults - skips printing if value equals default
+    ($name:ident, $desc:expr, $($field:ident $(= $default:expr)?),* $(,)?) => {
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 writeln!(f, "{} ({}):", stringify!($name), $desc)?;
                 $(
-                    writeln!(f, "  {}: {}", stringify!($field).to_uppercase(), self.$field)?;
+                    impl_display!(@check_and_print f, self.$field, stringify!($field) $(, $default)?);
                 )*
                 Ok(())
             }
         }
     };
-    ($name:ident<'a>, $desc:expr, $($field:ident),* $(,)?) => {
+    // Version for lifetime-bound types
+    ($name:ident<'a>, $desc:expr, $($field:ident $(= $default:expr)?),* $(,)?) => {
         impl<'a> std::fmt::Display for $name<'a> {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 writeln!(f, "{} ({}):", stringify!($name), $desc)?;
                 $(
-                    writeln!(f, "  {}: {}", stringify!($field).to_uppercase(), self.$field)?;
+                    impl_display!(@check_and_print f, self.$field, stringify!($field) $(, $default)?);
                 )*
                 Ok(())
             }
         }
+    };
+    // Helper: print field only if it doesn't match the default
+    (@check_and_print $f:expr, $value:expr, $name:expr, $default:expr) => {
+        if $value != $default {
+            writeln!($f, "  {}: {}", $name.to_uppercase(), $value)?;
+        } else {
+            writeln!($f, "  {}:", $name.to_uppercase())?;
+        }
+    };
+    // Helper: always print if no default specified
+    (@check_and_print $f:expr, $value:expr, $name:expr) => {
+        writeln!($f, "  {}: {}", $name.to_uppercase(), $value)?;
     };
 }
 
@@ -112,7 +126,10 @@ pub struct ATR<'a> {
     pub cmd_line: Cn<'a>,
 }
 
-impl_display!(ATR<'a>, "Audit Trail Record", mod_tim, cmd_line);
+impl_display!(ATR<'a>, "Audit Trail Record", 
+    mod_tim = U4::from(0), 
+    cmd_line = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(1, 10)]
@@ -196,11 +213,17 @@ pub struct MIR<'a> {
 }
 
 impl_display!(MIR<'a>, "Master Information Record",
-    setup_t, start_t, stat_num, mode_cod, rtst_cod, prot_cod, burn_tim, cmod_cod,
-    lot_id, part_typ, node_nam, tstr_typ, job_nam, job_rev, sblot_id, oper_nam,
-    exec_typ, exec_ver, test_cod, tst_temp, user_txt, aux_file, pkg_typ, famly_id,
-    date_cod, facil_id, floor_id, proc_id, oper_frq, spec_nam, spec_ver, flow_id,
-    setup_id, dsgn_rev, eng_id, rom_cod, serl_num, supr_nam
+    setup_t = U4T::from(0), start_t = U4T::from(0), stat_num = U1::from(0), 
+    mode_cod = C1(b' '), rtst_cod = C1(b' '), prot_cod = C1(b' '), 
+    burn_tim = U2::from(0), cmod_cod = C1(b' '),
+    lot_id = Cn(b""), part_typ = Cn(b""), node_nam = Cn(b""), tstr_typ = Cn(b""), 
+    job_nam = Cn(b""), job_rev = Cn(b""), sblot_id = Cn(b""), oper_nam = Cn(b""),
+    exec_typ = Cn(b""), exec_ver = Cn(b""), test_cod = Cn(b""), tst_temp = Cn(b""), 
+    user_txt = Cn(b""), aux_file = Cn(b""), pkg_typ = Cn(b""), famly_id = Cn(b""),
+    date_cod = Cn(b""), facil_id = Cn(b""), floor_id = Cn(b""), proc_id = Cn(b""), 
+    oper_frq = Cn(b""), spec_nam = Cn(b""), spec_ver = Cn(b""), flow_id = Cn(b""),
+    setup_id = Cn(b""), dsgn_rev = Cn(b""), eng_id = Cn(b""), rom_cod = Cn(b""), 
+    serl_num = Cn(b""), supr_nam = Cn(b"")
 );
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
@@ -215,7 +238,12 @@ pub struct MRR<'a> {
     pub exc_desc: Cn<'a>,
 }
 
-impl_display!(MRR<'a>, "Master Results Record", finish_t, disp_cod, usr_desc, exc_desc);
+impl_display!(MRR<'a>, "Master Results Record", 
+    finish_t, 
+    disp_cod = C1::from(b' '), 
+    usr_desc = Cn(b""), 
+    exc_desc = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(1, 30)]
@@ -233,7 +261,15 @@ pub struct PCR {
     pub func_cnt: U4,
 }
 
-impl_display!(PCR, "Part Count Record", head_num, site_num, part_cnt, rtst_cnt, abrt_cnt, good_cnt, func_cnt);
+impl_display!(PCR, "Part Count Record", 
+    head_num, 
+    site_num, 
+    part_cnt, 
+    rtst_cnt = U4::from(0xffffffff), 
+    abrt_cnt = U4::from(0xffffffff), 
+    good_cnt = U4::from(0xffffffff), 
+    func_cnt = U4::from(0xffffffff)
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(1, 40)]
@@ -248,7 +284,11 @@ pub struct HBR<'a> {
     pub hbin_nam: Cn<'a>,
 }
 
-impl_display!(HBR<'a>, "Hardware Bin Record", head_num, site_num, hbin_num, hbin_cnt, hbin_pf, hbin_nam);
+impl_display!(HBR<'a>, "Hardware Bin Record", 
+    head_num, site_num, hbin_num, hbin_cnt, 
+    hbin_pf = C1::from(0x20), 
+    hbin_nam = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(1, 50)]
@@ -263,7 +303,11 @@ pub struct SBR<'a> {
     pub sbin_nam: Cn<'a>,
 }
 
-impl_display!(SBR<'a>, "Software Bin Record", head_num, site_num, sbin_num, sbin_cnt, sbin_pf, sbin_nam);
+impl_display!(SBR<'a>, "Software Bin Record", 
+    head_num, site_num, sbin_num, sbin_cnt, 
+    sbin_pf = C1::from(0x20), 
+    sbin_nam = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(1, 60)]
@@ -283,7 +327,15 @@ pub struct PMR<'a> {
     pub site_num: U1,
 }
 
-impl_display!(PMR<'a>, "Pin Map Record", pmr_index, chan_typ, chan_nam, phy_nam, log_nam, head_num, site_num);
+impl_display!(PMR<'a>, "Pin Map Record", 
+    pmr_index, 
+    chan_typ = U2::from(0), 
+    chan_nam = Cn(b""), 
+    phy_nam = Cn(b""), 
+    log_nam = Cn(b""), 
+    head_num = U1::from(1), 
+    site_num = U1::from(1)
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(1, 62)]
@@ -443,7 +495,12 @@ pub struct WIR<'a> {
     pub wafer_id: Cn<'a>,
 }
 
-impl_display!(WIR<'a>, "Wafer Information Record", head_num, site_grp, start_t, wafer_id);
+impl_display!(WIR<'a>, "Wafer Information Record", 
+    head_num, 
+    site_grp = U1::from(255), 
+    start_t, 
+    wafer_id = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 #[record_type(2, 20)]
@@ -476,9 +533,19 @@ pub struct WRR<'a> {
 }
 
 impl_display!(WRR<'a>, "Wafer Results Record",
-    head_num, site_grp, finish_t, part_cnt, rtst_cnt, abrt_cnt,
-    good_cnt, func_cnt, wafer_id, fabwf_id, frame_id, mask_id,
-    usr_desc, exc_desc
+    head_num, 
+    site_grp = U1::from(255), 
+    finish_t, part_cnt, 
+    rtst_cnt = U4::from(0xffffffff), 
+    abrt_cnt = U4::from(0xffffffff),
+    good_cnt = U4::from(0xffffffff), 
+    func_cnt = U4::from(0xffffffff), 
+    wafer_id = Cn(b""), 
+    fabwf_id = Cn(b""), 
+    frame_id = Cn(b""), 
+    mask_id = Cn(b""),
+    usr_desc = Cn(b""), 
+    exc_desc = Cn(b"")
 );
 
 #[derive(Debug, PartialEq, STDFRecord)]
@@ -505,8 +572,15 @@ pub struct WCR {
 }
 
 impl_display!(WCR, "Wafer Configuration Record",
-    wafr_siz, die_ht, die_wid, wf_units, wf_flat,
-    center_x, center_y, pos_x, pos_y
+    wafr_siz = R4::from(0.0), 
+    die_ht = R4::from(0.0), 
+    die_wid = R4::from(0.0), 
+    wf_units = U1::from(0), 
+    wf_flat = C1::from(0x20),
+    center_x = I2::from(std::i16::MIN), 
+    center_y = I2::from(std::i16::MIN), 
+    pos_x = C1::from(0x20), 
+    pos_y = C1::from(0x20)
 );
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
@@ -543,8 +617,14 @@ pub struct PRR<'a> {
 }
 
 impl_display!(PRR<'a>, "Part Results Record",
-    head_num, site_num, part_flg, num_test, hard_bin, soft_bin,
-    x_coord, y_coord, test_t, part_id, part_txt, part_fix
+    head_num, site_num, part_flg, num_test, hard_bin, 
+    soft_bin = U2::from(0xffff),
+    x_coord = I2::from(std::i16::MIN), 
+    y_coord = I2::from(std::i16::MIN), 
+    test_t = U4::from(0), 
+    part_id = Cn(b""), 
+    part_txt = Cn(b""), 
+    part_fix = Bn(b"")
 );
 
 #[derive(Debug, PartialEq, STDFRecord)]
@@ -578,9 +658,16 @@ pub struct TSR<'a> {
 }
 
 impl_display!(TSR<'a>, "Test Synopsis Record",
-    head_num, site_num, test_typ, test_num, exec_cnt, fail_cnt,
-    alrm_cnt, test_nam, seq_name, test_lbl, opt_flag, test_tim,
-    test_min, test_max, tst_sums, tst_sqrs
+    head_num, site_num, test_typ, test_num, exec_cnt, fail_cnt, alrm_cnt, 
+    test_nam = Cn(b""), 
+    seq_name = Cn(b""), 
+    test_lbl = Cn(b""), 
+    opt_flag = B1::from(0xff), 
+    test_tim = R4::from(std::f32::NAN),
+    test_min = R4::from(std::f32::NAN), 
+    test_max = R4::from(std::f32::NAN), 
+    tst_sums = R4::from(std::f32::NAN), 
+    tst_sqrs = R4::from(std::f32::NAN)
 );
 
 #[derive(Debug, PartialEq, STDFRecord)]
@@ -624,10 +711,22 @@ pub struct PTR<'a> {
 }
 
 impl_display!(PTR<'a>, "Parametric Test Record",
-    test_num, head_num, site_num, test_flg, parm_flg, result,
-    test_txt, alarm_id, opt_flag, res_scal, llm_scal, hlm_scal,
-    lo_limit, hi_limit, units, c_resfmt, c_llmfmt, c_hlmfmt,
-    lo_spec, hi_spec
+    test_num, head_num, site_num, test_flg, parm_flg, 
+    result = R4::from(std::f32::NAN),
+    test_txt = Cn(b""), 
+    alarm_id = Cn(b""), 
+    opt_flag = B1::from(0xff), 
+    res_scal = I1::from(std::i8::MIN), 
+    llm_scal = I1::from(std::i8::MIN), 
+    hlm_scal = I1::from(std::i8::MIN),
+    lo_limit = R4::from(std::f32::NAN), 
+    hi_limit = R4::from(std::f32::NAN), 
+    units = Cn(b""), 
+    c_resfmt = Cn(b""), 
+    c_llmfmt = Cn(b""), 
+    c_hlmfmt = Cn(b""),
+    lo_spec = R4::from(std::f32::NAN), 
+    hi_spec = R4::from(std::f32::NAN)
 );
 
 #[derive(Debug, PartialEq, STDFRecord)]
@@ -779,7 +878,9 @@ pub struct BPS<'a> {
     pub seq_name: Cn<'a>,
 }
 
-impl_display!(BPS<'a>, "Begin Program Section", seq_name);
+impl_display!(BPS<'a>, "Begin Program Section", 
+    seq_name = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct EPS;
@@ -837,7 +938,9 @@ pub struct DTR<'a> {
     pub text_dat: Cn<'a>,
 }
 
-impl_display!(DTR<'a>, "Datalog Text Record", text_dat);
+impl_display!(DTR<'a>, "Datalog Text Record", 
+    text_dat = Cn(b"")
+);
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Raw<'a> {

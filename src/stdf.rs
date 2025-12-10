@@ -29,6 +29,8 @@ enum Commands {
     /// Display specific field values from STDF records
     Show {
         /// Record type (e.g., MIR, PRR, PTR)
+        /// 
+        /// Use 'stdf tally records <file>' to see all available record types.
         record_type: String,
         /// Field name or 'fields' to list available fields
         field: String,
@@ -40,11 +42,11 @@ enum Commands {
     },
     /// Dump records from STDF file
     Dump {
-        /// STDF file path
-        file: String,
         /// Specific record types to dump (optional, e.g., MIR PRR)
         #[arg(num_args = 0..)]
         record_types: Vec<String>,
+        /// STDF file path
+        file: String,
     },
     /// Check file properties (ft, ws, hot, cold, room, truncated, complete)
     Is {
@@ -145,9 +147,9 @@ enum CountCommands {
         recursive: bool,
     },
     /// Count specific record types
-    Types {
+    Rectypes {
         /// Record types to count (e.g., PTR FTR)
-        #[arg(num_args = 1..)]
+        #[arg(num_args = 0..)]
         record_types: Vec<String>,
         /// Path to STDF file or directory
         path: String,
@@ -217,7 +219,7 @@ fn main() {
                     eprintln!("'count hbins' not yet implemented");
                     process::exit(1);
                 }
-                CountCommands::Types { record_types, path, recursive } => {
+                CountCommands::Rectypes { record_types, path, recursive } => {
                     // Validate all record types
                     for rt in &record_types {
                         if get_record_type_codes(rt).is_none() {

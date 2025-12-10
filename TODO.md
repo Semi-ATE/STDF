@@ -38,6 +38,9 @@
 ## Future Enhancements
 - [ ] Array field handling in ascii() method (currently placeholders)
 - [ ] Complete ATDF parsing implementation (atdf_parse_record is stub)
+- [ ] Review Display implementations for records with Vec fields (PGR, PLR, RDR, SDR, MPR, FTR, GDR)
+  - Consider adding default value handling to custom Display implementations
+  - Evaluate if macro-based approach can be extended to handle array fields
 
 ## Build & Distribution
 - [ ] Set up GitHub Actions workflow for multi-platform wheel building

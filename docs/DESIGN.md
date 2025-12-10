@@ -165,6 +165,27 @@ The intelligent routing in `show_field()` was designed based on STDF file struct
 
 ## CLI Commands
 
+**Design Principle: Consistent Argument Order**
+
+All CLI commands follow a consistent pattern where the file/path argument appears **at the end**:
+- `stdf <command> [options] [arguments] <file|path>`
+- Examples:
+  - `stdf dump [RECORD_TYPES]... <FILE>`
+  - `stdf count rectypes [RECORD_TYPES]... <PATH>`
+  - `stdf show <RECORD> <FIELD> <FILE>`
+  - `stdf to <FORMAT> <FILE>`
+
+This follows natural language patterns ("dump MIR from file", "count PTR in file") and is consistent with common Unix tools like `grep`, `cat`, etc.
+
+### Implementation
+
+Built with **clap 4.5** using derive macros for:
+- Auto-generated help text (`--help`)
+- Auto-generated version flags (`--version`)
+- Type-safe argument parsing
+- Subcommand hierarchies
+- Better error messages
+
 ### Implemented Commands
 
 #### **count records** ✅
