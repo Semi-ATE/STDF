@@ -2,7 +2,7 @@ use std::env;
 use std::process;
 use std::io::{self, Write};
 
-use stdf::{StdfRecordIterator, stdf_parse_record, V4};
+use stdf_lib::{StdfRecordIterator, stdf_parse_record, V4};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -106,3 +106,4 @@ fn convert_to_atdf(filename: &str) -> io::Result<()> {
     
     Ok(())
 }
+

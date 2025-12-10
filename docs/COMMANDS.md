@@ -277,9 +277,91 @@
     xz/LZMA : .xz
     zstd : .zst (default)
     lz4 : .lz4
-    zip : .zip (Archive format)
-    tar : .tar (Archive format)
     ```
+
+## stdf compress
+
+- stdf compress [`algorithm`] [`-v`] [`-p`] [`-f`] `<file>`
+
+    The supported `algorithm`s are :
+        `gzip` or `gz` --> `.gz` extension
+        `zlib` or `z` --> `.z` extension
+        `bzip2` or `bz2` --> `.bz2` extension
+        `xz` or `lzma` --> `.xz` extension
+        `zstd` or `zst` --> `.zst` extension --> default
+        `lz4` --> `.lz4` extension
+
+    This will first check if `<file>` is compressed (indicative?).
+    If it *IS NOT* compressed, the file will be compressed by using the given `algorithm` (and the file will be put along side the original).
+    If the file *IS* compressed, it depends if the file is compressed in a supported algorithm.
+
+    1. if it is compressed in a supported algorithm, it will be first de-compressed, and then re compressed with the given `algorithm`.
+      The intermediate decompressed file will be removed after the re-compression.
+
+    2. if it is compressed in a *NONE* supported algorithm, then print a message saying that the given file is compressed in an non-supported 
+      compression, and that the user should use a tool to decompress the file.
+
+    If no `algorithm` is provided, `zstd` is used.
+
+    The `-v` (or alternatively `--verify`) parameter is given, then we calculate the SHA-256 hash on the bare .std[f] file prior to compression, and
+    compare it after compression to the "on the fly" decompressed file's hash. If the hashes are the same, we can clean up (if needed).
+    If the hashes are *NOT* the same, we inform the user and ask if we should re-try the compression (of course removing the eronious compressed file).
+
+    The output file name is the name of the bare .std[f] file, appended with the appropriate (see above) extension. 
+
+    If the output file already exists, the command will fail with an error unless the `-f` (or alternatively `--force`) option is provided.
+
+    The `-p` (or alternatively `--progress`) option will display a progress bar (what library did we agree upon again?)
+    If this option is not given, we just display :
+
+    ```
+    Compressing with bz2 to .\data\pool\v93k41_1_RMHATC4135FGU313930A_191_F3N_R_824411001_00_071023_055115.std.bz2 ... Done.
+    ```
+    No need to say anything about calculating or verifying the SHA-256 hash.
+
+    the agreed upon exit code strategy applies.
+
+    NOTE: If we start from a `<file>` that is compressed with a supported format, we will *NOT* leave the intermadiate decompressed .std[f] file
+          on disk, however if we already start from a non-compressed .std[f] file, we *WILL* leave it on disk!
+
+
+## stdf decompress
+
+- stdf decompress [`-v`] [`-p`] [`-f`] `<file>`
+
+    If `<file>` is not a compressed (supported or not) file, we let the user know. (exit code is Non-zero)
+    If `<file>` is a compressed file, but not in a supported format, we also let the user know. (exit code is Non-zero)
+    If `<file>` is a compressed file in a supported format, we de-compress the file with the algorithm that indicativ tells us.
+
+    If the output file already exists, the command will fail with an error unless the `-f` (or alternatively `--force`) option is provided.
+
+    If the optional `-v` or alternatively `--verify` is given, we do the same SHA-256 dance as described in stdf compress -v.
+
+    If the optional `-p` or alternatively `--progress` option is given, a progress bar should be displayed.
+
+
+    the agreed upon exit code strategy applies.
+
+## stdf checksum
+
+- stdf checksum `<file>`
+
+    This returns the SHA-256 checksum of the `<file>`.
+    If the file is compressed in a supported format, we calculate the SHA-256 checksum "on the fly" (so without decompressing) and report it 
+    back in uppercase.
+
+    ```bash
+    $ stdf checksum somefile.stdf
+    6B2B890B6B5E2B8B8D8E8A6B8E2F69FF1D1E8E965901F57B8D8A6FB8D70F042B
+    ```
+
+    If the file is compressed but *NOT* in a supported format, we inform the user.
+
+    Agreed upon exit code strategy applies. 
+
+## stdf check
+
+- stdf check `<file>`
 
 ## stdf dump
 

@@ -6,5 +6,7 @@ dependencies:
   - python=3.12
   - pip
   - py7zr
+  - zstandard
+  - lz4
   - pip:
     - maturin

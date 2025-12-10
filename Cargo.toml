@@ -10,7 +10,7 @@ keywords = ["stdf", "semiconductor", "test", "ate"]
 categories = ["parser-implementations", "encoding"]
 
 [lib]
-name = "stdf"
+name = "stdf_lib"
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
@@ -27,11 +27,16 @@ byte = "0.2"
 memmap2 = "0.9"
 stdf-record-derive = { path = "stdf-record-derive", version = "0.2" }
 flate2 = "1.0"
+bzip2 = "0.4"
+xz2 = "0.1"
+zstd = "0.13"
+lz4 = "1.24"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 clap = { version = "4.5", features = ["derive"] }
 indicatif = "0.17"
 infer = "0.16"
 regex = "1.11"
+sha2 = "0.10"
 
 # Visualization dependencies
 rust_xlsxwriter = "0.79"

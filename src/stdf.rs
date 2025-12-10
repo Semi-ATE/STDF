@@ -2,7 +2,7 @@ use std::process;
 use std::collections::HashMap;
 
 use clap::{Parser, Subcommand};
-use stdf::parsers::StdfParser;
+use stdf_lib::parsers::StdfParser;
 
 /// Semi-ATE STDF Tool - Fast STDF file parser and analyzer
 #[derive(Parser)]
@@ -82,6 +82,38 @@ enum Commands {
         /// STDF file path
         file: String,
     },
+    /// Compress STDF file
+    #[command(override_usage = "stdf.exe compress [ALGORITHM] [OPTIONS] <FILE>")]
+    Compress {
+        /// Compression algorithm: gzip/gz, zlib/z, bzip2/bz2, xz/lzma, zstd/zst (default), lz4
+        algorithm: Option<String>,
+        /// STDF file path
+        file: String,
+        /// Verify compression integrity with SHA-256
+        #[arg(short, long, global = true)]
+        verify: bool,
+        /// Show progress bar
+        #[arg(short, long)]
+        progress: bool,
+        /// Force overwrite if output file exists
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// Decompress STDF file
+    #[command(override_usage = "stdf.exe decompress [OPTIONS] <FILE>")]
+    Decompress {
+        /// STDF file path
+        file: String,
+        /// Verify decompression integrity with SHA-256
+        #[arg(short, long, global = true)]
+        verify: bool,
+        /// Show progress bar
+        #[arg(short, long)]
+        progress: bool,
+        /// Force overwrite if output file exists
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -154,6 +186,11 @@ enum CountCommands {
 enum ShowCommands {
     /// List all STDF V4 record types
     Records,
+    /// List supported compression formats
+    Supported {
+        #[command(subcommand)]
+        subcommand: ShowSupportedCommands,
+    },
     /// Display field values from a specific record type
     Field {
         /// Record type (e.g., MIR, PRR, PTR)
@@ -166,6 +203,12 @@ enum ShowCommands {
         #[arg(short = 'n', long)]
         limit: Option<i32>,
     },
+}
+
+#[derive(Subcommand)]
+enum ShowSupportedCommands {
+    /// List supported compression formats
+    Compressions,
 }
 
 #[derive(Subcommand)]
@@ -486,8 +529,42 @@ fn main() {
                 ShowCommands::Records => {
                     print_all_record_types();
                 }
+                ShowCommands::Supported { subcommand } => {
+                    match subcommand {
+                        ShowSupportedCommands::Compressions => {
+                            println!("gzip/zlib : .gz, .z");
+                            println!("bzip2 : .bz2");
+                            println!("xz/LZMA : .xz");
+                            println!("zstd : .zst (default)");
+                            println!("lz4 : .lz4");
+                        }
+                    }
+                }
                 ShowCommands::Field { record_type, field, file, limit } => {
                     handle_show_command_new(&record_type, &field, &file, limit);
+                }
+            }
+        }
+        Commands::Compress { algorithm, verify, progress, force, file } => {
+            let algo = algorithm.as_deref().unwrap_or("zstd");
+            match compress_file(&file, algo, verify, progress, force) {
+                Ok(_output_path) => {
+                    process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        Commands::Decompress { verify, progress, force, file } => {
+            match decompress_file(&file, verify, progress, force) {
+                Ok(_output_path) => {
+                    process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
                 }
             }
         }
@@ -561,7 +638,7 @@ fn count_records(filename: &str) -> Result<(), std::io::Error> {
 }
 
 fn count_all_records(filename: &str) -> Result<usize, std::io::Error> {
-    use stdf::StdfRecordIterator;
+    use stdf_lib::StdfRecordIterator;
     
     let iter = StdfRecordIterator::new(filename)?;
     let mut count = 0;
@@ -575,7 +652,7 @@ fn count_all_records(filename: &str) -> Result<usize, std::io::Error> {
 }
 
 fn count_specific_records(filename: &str, record_types: &[String]) -> Result<usize, std::io::Error> {
-    use stdf::StdfRecordIterator;
+    use stdf_lib::StdfRecordIterator;
     
     // Get the target record type codes for fast filtering
     let mut target_codes: Vec<(u8, u8)> = Vec::new();
@@ -609,7 +686,7 @@ fn count_specific_records(filename: &str, record_types: &[String]) -> Result<usi
 }
 
 fn count_parts(filename: &str) -> Result<f64, std::io::Error> {
-    use stdf::StdfRecordIterator;
+    use stdf_lib::StdfRecordIterator;
     
     let iter = StdfRecordIterator::new(filename)?;
     let mut pir_count = 0;
@@ -654,7 +731,7 @@ fn count_parts(filename: &str) -> Result<f64, std::io::Error> {
 }
 
 fn count_wafers(filename: &str) -> Result<f64, std::io::Error> {
-    use stdf::StdfRecordIterator;
+    use stdf_lib::StdfRecordIterator;
     
     let iter = StdfRecordIterator::new(filename)?;
     let mut wir_count = 0;
@@ -696,7 +773,7 @@ fn count_wafers(filename: &str) -> Result<f64, std::io::Error> {
 }
 
 fn tally_records(filename: &str) -> Result<(), std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfRecordIterator, stdf_parse_record, V4};
     
     let iter = StdfRecordIterator::new(filename)?;
     let endian = iter.endian();
@@ -897,7 +974,7 @@ fn check_is_room(filename: &str) -> Result<bool, std::io::Error> {
 }
 
 fn check_is_truncated(filename: &str) -> Result<bool, std::io::Error> {
-    use stdf::StdfRecordIterator;
+    use stdf_lib::StdfRecordIterator;
     let iter = StdfRecordIterator::new(filename)?;
     
     // Iterate through all records and check if any fail to parse
@@ -913,7 +990,7 @@ fn check_is_truncated(filename: &str) -> Result<bool, std::io::Error> {
 }
 
 fn check_is_complete(filename: &str) -> Result<bool, std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfRecordIterator, stdf_parse_record, V4};
     let iter = StdfRecordIterator::new(filename)?;
     let endian = iter.endian();
     
@@ -933,7 +1010,7 @@ fn check_is_complete(filename: &str) -> Result<bool, std::io::Error> {
 }
 
 fn get_lot_id(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfStreamingIterator, stdf_parse_record, V4};
     let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
@@ -955,7 +1032,7 @@ fn get_lot_id(filename: &str) -> Result<String, std::io::Error> {
 }
 
 fn get_tester(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfStreamingIterator, stdf_parse_record, V4};
     let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
@@ -977,7 +1054,7 @@ fn get_tester(filename: &str) -> Result<String, std::io::Error> {
 }
 
 fn get_tester_type(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfStreamingIterator, stdf_parse_record, V4};
     let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
@@ -1064,7 +1141,7 @@ fn parse_temperature_as_int(temp_str: &str) -> Result<i32, String> {
 }
 
 fn get_temperature(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::{StdfStreamingIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfStreamingIterator, stdf_parse_record, V4};
     let iter = StdfStreamingIterator::new(filename)?;
     let endian = iter.endian();
     
@@ -1086,7 +1163,7 @@ fn get_temperature(filename: &str) -> Result<String, std::io::Error> {
 }
 
 fn get_endian(filename: &str) -> Result<String, std::io::Error> {
-    use stdf::StdfRecordIterator;
+    use stdf_lib::StdfRecordIterator;
     let iter = StdfRecordIterator::new(filename)?;
     let endian = iter.endian();
     Ok(match endian {
@@ -1096,7 +1173,7 @@ fn get_endian(filename: &str) -> Result<String, std::io::Error> {
 }
 
 fn convert_to_atdf(filename: &str, force: bool) -> Result<String, std::io::Error> {
-    use stdf::{StdfRecordIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfRecordIterator, stdf_parse_record, V4};
     use std::io::Write;
     use std::path::Path;
     use std::fs::File;
@@ -1311,8 +1388,6 @@ fn handle_show_command(args: &[String]) {
                 println!("xz/LZMA : .xz");
                 println!("zstd : .zst (default)");
                 println!("lz4 : .lz4");
-                println!("zip : .zip (Archive format)");
-                println!("tar : .tar (Archive format)");
             } else {
                 eprintln!("Error: Unknown 'show supported' subcommand");
                 eprintln!("Usage: {} show supported compressions", args[0]);
@@ -1417,7 +1492,7 @@ fn get_record_type_codes(record_type: &str) -> Option<(u8, u8)> {
 }
 
 fn show_field(record_type: &str, field_name: &str, filename: &str, limit: Option<i32>) -> Result<Vec<String>, std::io::Error> {
-    use stdf::{StdfRecordIterator, StdfStreamingIterator, stdf_parse_record, V4};
+    use stdf_lib::{StdfRecordIterator, StdfStreamingIterator, stdf_parse_record, V4};
     
     let mut results = Vec::new();
     let count_limit = limit.map(|n| n.abs() as usize);
@@ -1536,8 +1611,8 @@ fn show_field(record_type: &str, field_name: &str, filename: &str, limit: Option
     Ok(results)
 }
 
-fn extract_field_value(record: &stdf::V4, field_name: &str) -> Option<String> {
-    use stdf::V4;
+fn extract_field_value(record: &stdf_lib::V4, field_name: &str) -> Option<String> {
+    use stdf_lib::V4;
     
     match record {
         V4::MIR(mir) => {
@@ -1601,3 +1676,487 @@ fn get_record_fields(record_type: &str) -> Result<Vec<String>, String> {
         _ => Err(format!("Fields for record type '{}' not yet implemented. Use 'show records' to see all available record types.", record_type)),
     }
 }
+
+// ============================================================================
+// Compression / Decompression Functions
+// ============================================================================
+
+use std::fs::File;
+use std::path::Path;
+use std::io::{Read, Write};
+use flate2::Compression;
+use flate2::read::{GzDecoder, ZlibDecoder};
+use flate2::write::{GzEncoder, ZlibEncoder};
+use bzip2::read::BzDecoder;
+use bzip2::write::BzEncoder;
+use xz2::read::XzDecoder;
+use xz2::write::XzEncoder;
+use sha2::{Sha256, Digest};
+
+fn calculate_sha256<P: AsRef<Path>>(path: P) -> Result<String, std::io::Error> {
+    let mut file = File::open(path)?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn detect_compression(path: &Path) -> Result<Option<String>, String> {
+    let mut file = File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut buffer = vec![0u8; 16];
+    file.read(&mut buffer).map_err(|e| format!("Failed to read file: {}", e))?;
+    
+    // Use infer crate to detect file type
+    if let Some(kind) = infer::get(&buffer) {
+        match kind.mime_type() {
+            "application/gzip" => Ok(Some("gzip".to_string())),
+            "application/x-bzip2" => Ok(Some("bzip2".to_string())),
+            "application/x-xz" => Ok(Some("xz".to_string())),
+            "application/zstd" => Ok(Some("zstd".to_string())),
+            "application/x-lz4" => Ok(Some("lz4".to_string())),
+            "application/zip" => Ok(Some("zip".to_string())),
+            "application/x-tar" => Ok(Some("tar".to_string())),
+            _ => Ok(None),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+fn compress_file(input_path: &str, algorithm: &str, verify: bool, show_progress: bool, force: bool) -> Result<String, String> {
+    let path = Path::new(input_path);
+    
+    if !path.exists() {
+        return Err(format!("File not found: {}", input_path));
+    }
+    
+    // Check if file is already compressed
+    let compression = detect_compression(path)?;
+    
+    let (source_path, temp_file, should_cleanup) = if let Some(current_compression) = compression {
+        // File is compressed
+        if !is_supported_compression(&current_compression) {
+            return Err(format!(
+                "File is compressed with unsupported format '{}'. Please decompress manually.",
+                current_compression
+            ));
+        }
+        
+        // Decompress first
+        if !show_progress {
+            println!("File is already compressed with {}. Decompressing first...", current_compression);
+        }
+        let decompressed = decompress_to_temp(input_path)?;
+        (decompressed.clone(), Some(decompressed), true)
+    } else {
+        (input_path.to_string(), None, false)
+    };
+    
+    // Calculate original hash if verify is enabled
+    let original_hash = if verify {
+        if !show_progress {
+            println!("Calculating SHA-256 hash of source file...");
+        }
+        Some(calculate_sha256(&source_path).map_err(|e| format!("Failed to calculate hash: {}", e))?)
+    } else {
+        None
+    };
+    
+    // Determine output extension and perform compression
+    let (extension, output_path) = get_compression_extension(&source_path, algorithm)?;
+    
+    // Check if output file already exists
+    if Path::new(&output_path).exists() && !force {
+        return Err(format!("Output file already exists: {}. Use -f/--force to overwrite.", output_path));
+    }
+    
+    if show_progress {
+        compress_with_progress(&source_path, &output_path, algorithm)?;
+    } else {
+        use std::io::{self, Write};
+        print!("Compressing with {} to {} ... ", algorithm, output_path);
+        io::stdout().flush().unwrap();
+        compress_with_algorithm(&source_path, &output_path, algorithm)?;
+        println!("Done.");
+    }
+    
+    // Verify if requested
+    if verify {
+        if !show_progress {
+            println!("Verifying compression integrity...");
+        }
+        let decompressed_hash = verify_compressed_file(&output_path, algorithm)?;
+        
+        if Some(decompressed_hash.clone()) != original_hash {
+            // Cleanup failed compression
+            let _ = std::fs::remove_file(&output_path);
+            if should_cleanup {
+                let _ = std::fs::remove_file(&source_path);
+            }
+            
+            return Err("Verification failed: Hash mismatch after compression. Do you want to retry?".to_string());
+        }
+        
+        if !show_progress {
+            println!("✓ Verification successful: Hashes match");
+        }
+    }
+    
+    // Cleanup temporary decompressed file if needed
+    if should_cleanup {
+        std::fs::remove_file(&source_path).map_err(|e| format!("Failed to cleanup temp file: {}", e))?;
+    }
+    
+    Ok(output_path)
+}
+
+fn decompress_file(input_path: &str, verify: bool, show_progress: bool, force: bool) -> Result<String, String> {
+    let path = Path::new(input_path);
+    
+    if !path.exists() {
+        return Err(format!("File not found: {}", input_path));
+    }
+    
+    // Detect compression format
+    let compression = detect_compression(path)?;
+    
+    if compression.is_none() {
+        return Err("File is not compressed".to_string());
+    }
+    
+    let compression_format = compression.unwrap();
+    
+    if !is_supported_compression(&compression_format) {
+        return Err(format!(
+            "File is compressed with unsupported format '{}'. Supported formats: gzip, bzip2, xz, zstd, lz4",
+            compression_format
+        ));
+    }
+    
+    // Calculate hash of compressed file if verify is enabled
+    let compressed_hash = if verify {
+        if !show_progress {
+            println!("Calculating SHA-256 hash of compressed file...");
+        }
+        Some(calculate_sha256(input_path).map_err(|e| format!("Failed to calculate hash: {}", e))?)
+    } else {
+        None
+    };
+    
+    // Determine output path (remove compression extension)
+    let output_path = get_decompressed_path(input_path);
+    
+    // Check if output file already exists
+    if Path::new(&output_path).exists() && !force {
+        return Err(format!("Output file already exists: {}. Use -f/--force to overwrite.", output_path));
+    }
+    
+    if show_progress {
+        decompress_with_progress(input_path, &output_path, &compression_format)?;
+    } else {
+        use std::io::{self, Write};
+        print!("Decompressing {} to {} ... ", compression_format, output_path);
+        io::stdout().flush().unwrap();
+        decompress_with_algorithm(input_path, &output_path, &compression_format)?;
+        println!("Done.");
+    }
+    
+    // Verify if requested
+    if verify && compressed_hash.is_some() {
+        if !show_progress {
+            println!("Verifying decompression integrity...");
+        }
+        // Re-compress and compare hashes
+        let temp_compressed = format!("{}.verify_temp", input_path);
+        compress_with_algorithm(&output_path, &temp_compressed, &compression_format)?;
+        
+        let verify_hash = calculate_sha256(&temp_compressed).map_err(|e| format!("Failed to calculate verify hash: {}", e))?;
+        std::fs::remove_file(&temp_compressed).map_err(|e| format!("Failed to cleanup temp file: {}", e))?;
+        
+        if Some(verify_hash) != compressed_hash {
+            let _ = std::fs::remove_file(&output_path);
+            return Err("Verification failed: Hash mismatch after decompression".to_string());
+        }
+        
+        if !show_progress {
+            println!("✓ Verification successful: Hashes match");
+        }
+    }
+    
+    Ok(output_path)
+}
+
+fn is_supported_compression(format: &str) -> bool {
+    matches!(format, "gzip" | "bzip2" | "xz" | "zstd" | "lz4")
+}
+
+fn get_compression_extension(source: &str, algorithm: &str) -> Result<(&'static str, String), String> {
+    let source_path = Path::new(source);
+    let base = source_path.file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or("Invalid filename")?;
+    let parent = source_path.parent().unwrap_or(Path::new(""));
+    
+    let (ext, output_name) = match algorithm.to_lowercase().as_str() {
+        "gzip" | "gz" => ("gz", format!("{}.gz", source)),
+        "zlib" | "z" => ("z", format!("{}.z", source)),
+        "bzip2" | "bz2" => ("bz2", format!("{}.bz2", source)),
+        "xz" | "lzma" => ("xz", format!("{}.xz", source)),
+        "zstd" | "zst" => ("zst", format!("{}.zst", source)),
+        "lz4" => ("lz4", format!("{}.lz4", source)),
+        _ => return Err(format!("Unsupported algorithm: {}. Use: gzip, bzip2, xz, zstd, lz4", algorithm)),
+    };
+    
+    Ok((ext, output_name))
+}
+
+fn get_decompressed_path(compressed_path: &str) -> String {
+    let path = Path::new(compressed_path);
+    
+    // Try to remove known compression extensions
+    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+        if let Some(parent) = path.parent() {
+            return parent.join(stem).to_string_lossy().to_string();
+        }
+        return stem.to_string();
+    }
+    
+    format!("{}.decompressed", compressed_path)
+}
+
+fn compress_with_algorithm(input: &str, output: &str, algorithm: &str) -> Result<(), String> {
+    let input_file = File::open(input).map_err(|e| format!("Failed to open input: {}", e))?;
+    let mut reader = std::io::BufReader::new(input_file);
+    
+    let output_file = File::create(output).map_err(|e| format!("Failed to create output: {}", e))?;
+    
+    let normalized_algo = normalize_algorithm_name(algorithm);
+    match normalized_algo.as_str() {
+        "gzip" => {
+            let mut encoder = GzEncoder::new(output_file, Compression::best());
+            std::io::copy(&mut reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "zlib" => {
+            let mut encoder = ZlibEncoder::new(output_file, Compression::best());
+            std::io::copy(&mut reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "bzip2" => {
+            let mut encoder = BzEncoder::new(output_file, bzip2::Compression::best());
+            std::io::copy(&mut reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "xz" => {
+            let mut encoder = XzEncoder::new(output_file, 9);
+            std::io::copy(&mut reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "zstd" => {
+            let mut encoder = zstd::Encoder::new(output_file, 22).map_err(|e| format!("Failed to create zstd encoder: {}", e))?;
+            std::io::copy(&mut reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "lz4" => {
+            let mut encoder = lz4::EncoderBuilder::new()
+                .level(12)
+                .build(output_file)
+                .map_err(|e| format!("Failed to create lz4 encoder: {}", e))?;
+            std::io::copy(&mut reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            let (_output, result) = encoder.finish();
+            result.map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        _ => return Err(format!("Unsupported algorithm: {}", algorithm)),
+    }
+    
+    Ok(())
+}
+
+fn decompress_with_algorithm(input: &str, output: &str, algorithm: &str) -> Result<(), String> {
+    let input_file = File::open(input).map_err(|e| format!("Failed to open input: {}", e))?;
+    let output_file = File::create(output).map_err(|e| format!("Failed to create output: {}", e))?;
+    let mut writer = std::io::BufWriter::new(output_file);
+    
+    match algorithm.to_lowercase().as_str() {
+        "gzip" => {
+            let mut decoder = GzDecoder::new(input_file);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "zlib" => {
+            let mut decoder = ZlibDecoder::new(input_file);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "bzip2" => {
+            let mut decoder = BzDecoder::new(input_file);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "xz" => {
+            let mut decoder = XzDecoder::new(input_file);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "zstd" => {
+            let mut decoder = zstd::Decoder::new(input_file).map_err(|e| format!("Failed to create zstd decoder: {}", e))?;
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "lz4" => {
+            let mut decoder = lz4::Decoder::new(input_file).map_err(|e| format!("Failed to create lz4 decoder: {}", e))?;
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        _ => return Err(format!("Unsupported algorithm: {}", algorithm)),
+    }
+    
+    writer.flush().map_err(|e| format!("Failed to flush output: {}", e))?;
+    Ok(())
+}
+
+fn decompress_to_temp(input: &str) -> Result<String, String> {
+    let path = Path::new(input);
+    let compression = detect_compression(path)?.ok_or("Not a compressed file")?;
+    
+    let temp_path = format!("{}.temp_decompressed", input);
+    decompress_with_algorithm(input, &temp_path, &compression)?;
+    
+    Ok(temp_path)
+}
+
+fn verify_compressed_file(compressed_path: &str, algorithm: &str) -> Result<String, String> {
+    // Decompress to temp and calculate hash
+    let temp_decompressed = format!("{}.verify_temp", compressed_path);
+    
+    // Normalize algorithm name for decompression
+    let normalized_algo = normalize_algorithm_name(algorithm);
+    decompress_with_algorithm(compressed_path, &temp_decompressed, &normalized_algo)?;
+    
+    let hash = calculate_sha256(&temp_decompressed).map_err(|e| format!("Failed to calculate hash: {}", e))?;
+    std::fs::remove_file(&temp_decompressed).map_err(|e| format!("Failed to cleanup temp file: {}", e))?;
+    
+    Ok(hash)
+}
+
+fn normalize_algorithm_name(algorithm: &str) -> String {
+    match algorithm.to_lowercase().as_str() {
+        "gz" => "gzip".to_string(),
+        "z" => "zlib".to_string(),
+        "bz2" => "bzip2".to_string(),
+        "lzma" => "xz".to_string(),
+        "zst" => "zstd".to_string(),
+        _ => algorithm.to_string(),
+    }
+}
+
+fn compress_with_progress(input: &str, output: &str, algorithm: &str) -> Result<(), String> {
+    use indicatif::{ProgressBar, ProgressStyle};
+    
+    let input_file = File::open(input).map_err(|e| format!("Failed to open input: {}", e))?;
+    let file_size = input_file.metadata().map_err(|e| format!("Failed to get file size: {}", e))?.len();
+    
+    let pb = ProgressBar::new(file_size);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .unwrap()
+            .progress_chars("#>-")
+    );
+    pb.set_message(format!("Compressing with {} to {}", algorithm, output));
+    
+    let reader = pb.wrap_read(input_file);
+    let mut buffered_reader = std::io::BufReader::new(reader);
+    
+    let output_file = File::create(output).map_err(|e| format!("Failed to create output: {}", e))?;
+    let mut writer = std::io::BufWriter::new(output_file);
+    
+    let normalized_algo = normalize_algorithm_name(algorithm);
+    
+    match normalized_algo.as_str() {
+        "gzip" => {
+            let mut encoder = GzEncoder::new(writer, Compression::default());
+            std::io::copy(&mut buffered_reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "zlib" => {
+            let mut encoder = ZlibEncoder::new(writer, Compression::default());
+            std::io::copy(&mut buffered_reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "bzip2" => {
+            let mut encoder = BzEncoder::new(writer, bzip2::Compression::default());
+            std::io::copy(&mut buffered_reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "xz" => {
+            let mut encoder = XzEncoder::new(writer, 6);
+            std::io::copy(&mut buffered_reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "zstd" => {
+            let mut encoder = zstd::Encoder::new(writer, 3).map_err(|e| format!("Failed to create zstd encoder: {}", e))?;
+            std::io::copy(&mut buffered_reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        "lz4" => {
+            let mut encoder = lz4::EncoderBuilder::new().build(writer).map_err(|e| format!("Failed to create lz4 encoder: {}", e))?;
+            std::io::copy(&mut buffered_reader, &mut encoder).map_err(|e| format!("Compression failed: {}", e))?;
+            encoder.finish().0.flush().map_err(|e| format!("Failed to finalize compression: {}", e))?;
+        }
+        _ => return Err(format!("Unsupported algorithm: {}", algorithm)),
+    }
+    
+    pb.finish_and_clear();
+    println!("✓ Compressed to {}", output);
+    Ok(())
+}
+
+fn decompress_with_progress(input: &str, output: &str, algorithm: &str) -> Result<(), String> {
+    use indicatif::{ProgressBar, ProgressStyle};
+    
+    let input_file = File::open(input).map_err(|e| format!("Failed to open input: {}", e))?;
+    let file_size = input_file.metadata().map_err(|e| format!("Failed to get file size: {}", e))?.len();
+    
+    let pb = ProgressBar::new(file_size);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .unwrap()
+            .progress_chars("#>-")
+    );
+    pb.set_message(format!("Decompressing {} to {}", algorithm, output));
+    
+    let reader = pb.wrap_read(input_file);
+    let mut buffered_reader = std::io::BufReader::new(reader);
+    
+    let output_file = File::create(output).map_err(|e| format!("Failed to create output: {}", e))?;
+    let mut writer = std::io::BufWriter::new(output_file);
+    
+    match algorithm.to_lowercase().as_str() {
+        "gzip" => {
+            let mut decoder = GzDecoder::new(buffered_reader);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "zlib" => {
+            let mut decoder = ZlibDecoder::new(buffered_reader);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "bzip2" => {
+            let mut decoder = BzDecoder::new(buffered_reader);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "xz" => {
+            let mut decoder = XzDecoder::new(buffered_reader);
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "zstd" => {
+            let mut decoder = zstd::Decoder::new(buffered_reader).map_err(|e| format!("Failed to create zstd decoder: {}", e))?;
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        "lz4" => {
+            let mut decoder = lz4::Decoder::new(buffered_reader).map_err(|e| format!("Failed to create lz4 decoder: {}", e))?;
+            std::io::copy(&mut decoder, &mut writer).map_err(|e| format!("Decompression failed: {}", e))?;
+        }
+        _ => return Err(format!("Unsupported algorithm: {}", algorithm)),
+    }
+    
+    writer.flush().map_err(|e| format!("Failed to flush output: {}", e))?;
+    pb.finish_and_clear();
+    println!("✓ Decompressed to {}", output);
+    Ok(())
+}
+

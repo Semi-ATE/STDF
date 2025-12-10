@@ -4,6 +4,13 @@
 
 **Semi-ATE-STDF** is a comprehensive Rust-based toolkit for semiconductor test data in STDF (Standard Test Data Format). It combines high-performance parsing with advanced visualization and reporting capabilities.
 
+### Naming Convention
+- **Rust Library**: `stdf-lib` (crate name: `stdf_lib`)
+- **CLI Binary**: `stdf` (outputs as `stdf.exe`)
+- **Python Module**: `import stdf` (PyO3 bindings expose as `stdf` for Python users)
+
+The library is named `stdf-lib` to avoid Cargo filename collisions with the `stdf` binary while maintaining a clean interface for both CLI and Python users.
+
 **Key Features:**
 - Maximum performance STDF parser (memory-mapped I/O, ~900 MB/s)
 - PDF report generation with embedded charts
