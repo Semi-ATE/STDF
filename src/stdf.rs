@@ -26,19 +26,10 @@ enum Commands {
         #[command(subcommand)]
         subcommand: TallyCommands,
     },
-    /// Display specific field values from STDF records
+    /// Display specific field values from STDF records or list all record types
     Show {
-        /// Record type (e.g., MIR, PRR, PTR)
-        /// 
-        /// Use 'stdf tally records <file>' to see all available record types.
-        record_type: String,
-        /// Field name or 'fields' to list available fields
-        field: String,
-        /// STDF file path
-        file: String,
-        /// Limit number of results (e.g., -10 for first 10)
-        #[arg(short = 'n', long)]
-        limit: Option<i32>,
+        #[command(subcommand)]
+        subcommand: ShowCommands,
     },
     /// Dump records from STDF file
     Dump {
@@ -156,6 +147,24 @@ enum CountCommands {
         /// Recursively process directories
         #[arg(short, long)]
         recursive: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum ShowCommands {
+    /// List all STDF V4 record types
+    Records,
+    /// Display field values from a specific record type
+    Field {
+        /// Record type (e.g., MIR, PRR, PTR)
+        record_type: String,
+        /// Field name or 'fields' to list available fields
+        field: String,
+        /// STDF file path
+        file: String,
+        /// Limit number of results (e.g., -10 for first 10)
+        #[arg(short = 'n', long)]
+        limit: Option<i32>,
     },
 }
 
@@ -472,10 +481,58 @@ fn main() {
                 }
             }
         }
-        Commands::Show { record_type, field, file, limit } => {
-            handle_show_command_new(&record_type, &field, &file, limit);
+        Commands::Show { subcommand } => {
+            match subcommand {
+                ShowCommands::Records => {
+                    print_all_record_types();
+                }
+                ShowCommands::Field { record_type, field, file, limit } => {
+                    handle_show_command_new(&record_type, &field, &file, limit);
+                }
+            }
         }
     }
+}
+
+fn print_all_record_types() {
+    println!("STDF V4 Record Types:");
+    println!();
+    println!("Information Records:");
+    println!("  FAR  - File Attributes Record");
+    println!("  ATR  - Audit Trail Record");
+    println!("  MIR  - Master Information Record");
+    println!("  MRR  - Master Results Record");
+    println!("  PCR  - Part Count Record");
+    println!("  HBR  - Hardware Bin Record");
+    println!("  SBR  - Software Bin Record");
+    println!("  PMR  - Pin Map Record");
+    println!("  PGR  - Pin Group Record");
+    println!("  PLR  - Pin List Record");
+    println!("  RDR  - Retest Data Record");
+    println!("  SDR  - Site Description Record");
+    println!();
+    println!("Per Wafer Records:");
+    println!("  WIR  - Wafer Information Record");
+    println!("  WRR  - Wafer Results Record");
+    println!("  WCR  - Wafer Configuration Record");
+    println!();
+    println!("Per Part Records:");
+    println!("  PIR  - Part Information Record");
+    println!("  PRR  - Part Results Record");
+    println!();
+    println!("Per Test Records:");
+    println!("  TSR  - Test Synopsis Record");
+    println!("  PTR  - Parametric Test Record");
+    println!("  MPR  - Multiple-Result Parametric Record");
+    println!("  FTR  - Functional Test Record");
+    println!();
+    println!("Generic Data:");
+    println!("  BPS  - Begin Program Section");
+    println!("  EPS  - End Program Section");
+    println!("  GDR  - Generic Data Record");
+    println!("  DTR  - Datalog Text Record");
+    println!();
+    println!("Use 'stdf tally records <file>' to see which records are in a specific file.");
 }
 
 // New show command handler for clap-based CLI

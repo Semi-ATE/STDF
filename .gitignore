@@ -45,6 +45,7 @@ conda-bld/
 .coverage
 htmlcov/
 .tox/
+lcov.info
 
 # Data files (keep only compressed versions)
 data/**/*.std

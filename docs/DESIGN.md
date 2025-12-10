@@ -780,11 +780,57 @@ Cargo workspace with multiple crates:
 ### Test Files
 Located in `data/` directory (production STDF files)
 
+### Test Organization
+- **Unit tests**: Embedded in source files or separate `tests/` directory
+  - `tests/types_test.rs`: Comprehensive type system tests (65 tests)
+  - `tests/display_defaults_test.rs`: Display trait tests
+  - `tests/roundtrip_tests.rs`: Serialization roundtrip tests
+  - `tests/atdf_test.rs`: ATDF conversion tests
+  - `src/parsers.rs`: Parser unit tests (embedded)
+  
 ### Test Strategy
-1. Unit tests for parsers and statistics
-2. Integration tests with real STDF files
-3. Visual regression tests for charts (future)
-4. Performance benchmarks
+1. **Unit tests** for parsers, types, and statistics
+2. **Integration tests** with real STDF files
+3. **Roundtrip tests** to ensure serialization fidelity
+4. **Coverage-driven testing** using cargo-llvm-cov
+5. Visual regression tests for charts (future)
+6. Performance benchmarks
+
+### Coverage Analysis
+- Tool: `cargo-llvm-cov` for line coverage analysis
+- Current coverage: **79.9%** on `types.rs` (255/319 lines)
+- Workflow:
+  1. Write tests
+  2. Run `cargo llvm-cov --lcov --output-path lcov.info` to generate report
+  3. Run `cargo llvm-cov --html` to generate interactive HTML report
+  4. Review uncovered lines in `target/llvm-cov/html/`
+  
+**Important**: Coverage is **NOT** automatically updated on file save. You must explicitly run coverage tools after changes.
+
+### Types Module Testing Insights
+The `types.rs` module (603 lines) defines STDF primitive types with comprehensive test coverage:
+
+**Tested areas** (65 tests in `tests/types_test.rs`):
+- All single-byte types: C1, U1, I1, B1, N1
+- All multi-byte types: U2, U4, U8, I2, I4, I8, R4, R8, U4T
+- Variable-length types: Cn, Bn, Dn, Vn (12 enum variants)
+- From/Into trait conversions (13 tests)
+- Display and Debug trait implementations
+- Binary serialization (TryRead/TryWrite)
+- Roundtrip consistency tests
+
+**Remaining uncovered code (~20%)**:
+- Error handling paths (malformed binary data)
+- U4T Display edge cases (invalid timestamp formatting)
+- C1 escape character handling (line 150)
+- `to_hex_string()` helper function (lines 363-368)
+- Dn/Vn serialization error paths
+
+**Key learnings**:
+- Wrapper types (B1, N1) use inner type's default Display (decimal not binary/hex)
+- U4T timestamps are timezone-aware (use substring assertions, not exact matches)
+- Dn Display only shows hex data (not bit length field)
+- From<&T> traits not always implemented - test actual trait bounds
 
 ## Python Integration
 
@@ -865,5 +911,35 @@ pub trait ReportWriter {
 
 ---
 
-*Last updated: 2024-12-08*
+# Appendix: Recent Development Sessions
+
+## 2024-12-10: Test Coverage Improvement
+
+**Context**: Analyzed and improved test coverage for `types.rs` module.
+
+**Actions Taken**:
+1. Analyzed existing `lcov.info` coverage data (was outdated from previous test run)
+2. Separated type tests from `src/types.rs` to `tests/types_test.rs` (41 → 65 tests)
+3. Added comprehensive tests for uncovered code paths:
+   - From/Into trait conversions for all primitive types
+   - Display/Debug trait implementations
+   - All 12 Vn enum variants
+   - Binary serialization edge cases
+4. Fixed test assertions to match actual implementations (not assumptions)
+5. Regenerated coverage: **79.9%** (up from 72%)
+
+**CLI Enhancement**: Added `stdf show records` command to list all 25 STDF V4 record types without requiring a file.
+
+**Key Insights**:
+- Coverage data requires explicit regeneration (`cargo llvm-cov`)
+- Coverage is NOT automatically updated on file save
+- Wrapper type Display traits use inner type's default formatting
+- Most uncovered code (~20%) is error handling paths and edge cases
+- Test actual behavior, not assumed behavior (discovered B1→"170", N1→"15", U4T timezone awareness)
+
+**Test Results**: All 103 tests passing (12 parser + 1 ATDF + 15 display + 5 roundtrip + 65 types + 5 doc)
+
+---
+
+*Last updated: 2024-12-10*
 *Combined from parser (DESIGN-old.md) and visualization (DESIGN-viz.md) documentation*
