@@ -83,14 +83,27 @@ enum Commands {
         file: String,
     },
     /// Compress STDF file
-    #[command(override_usage = "stdf.exe compress [ALGORITHM] [OPTIONS] <FILE>")]
     Compress {
-        /// Compression algorithm: gzip/gz, zlib/z, bzip2/bz2, xz/lzma, zstd/zst (default), lz4
-        algorithm: Option<String>,
-        /// STDF file path
-        file: String,
+        /// Use gzip compression
+        #[arg(long, visible_alias = "gz", conflicts_with_all = ["zlib", "bzip2", "xz", "zstd", "lz4"])]
+        gzip: bool,
+        /// Use zlib compression
+        #[arg(long, visible_alias = "z", conflicts_with_all = ["gzip", "bzip2", "xz", "zstd", "lz4"])]
+        zlib: bool,
+        /// Use bzip2 compression
+        #[arg(long, visible_alias = "bz2", conflicts_with_all = ["gzip", "zlib", "xz", "zstd", "lz4"])]
+        bzip2: bool,
+        /// Use xz compression
+        #[arg(long, visible_alias = "lzma", conflicts_with_all = ["gzip", "zlib", "bzip2", "zstd", "lz4"])]
+        xz: bool,
+        /// Use zstd compression (default)
+        #[arg(long, visible_alias = "zst", conflicts_with_all = ["gzip", "zlib", "bzip2", "xz", "lz4"])]
+        zstd: bool,
+        /// Use lz4 compression
+        #[arg(long, conflicts_with_all = ["gzip", "zlib", "bzip2", "xz", "zstd"])]
+        lz4: bool,
         /// Verify compression integrity with SHA-256
-        #[arg(short, long, global = true)]
+        #[arg(short, long)]
         verify: bool,
         /// Show progress bar
         #[arg(short, long)]
@@ -98,12 +111,14 @@ enum Commands {
         /// Force overwrite if output file exists
         #[arg(short, long)]
         force: bool,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+        /// STDF file or directory path
+        path: String,
     },
     /// Decompress STDF file
-    #[command(override_usage = "stdf.exe decompress [OPTIONS] <FILE>")]
     Decompress {
-        /// STDF file path
-        file: String,
         /// Verify decompression integrity with SHA-256
         #[arg(short, long, global = true)]
         verify: bool,
@@ -113,6 +128,11 @@ enum Commands {
         /// Force overwrite if output file exists
         #[arg(short, long)]
         force: bool,
+        /// Recursively process directories
+        #[arg(short, long)]
+        recursive: bool,
+        /// STDF file or directory path
+        path: String,
     },
 }
 
@@ -545,26 +565,61 @@ fn main() {
                 }
             }
         }
-        Commands::Compress { algorithm, verify, progress, force, file } => {
-            let algo = algorithm.as_deref().unwrap_or("zstd");
-            match compress_file(&file, algo, verify, progress, force) {
-                Ok(_output_path) => {
-                    process::exit(0);
+        Commands::Compress { gzip, zlib, bzip2, xz, zstd, lz4, verify, progress, force, recursive, path } => {
+            let algo = if gzip {
+                "gzip"
+            } else if zlib {
+                "zlib"
+            } else if bzip2 {
+                "bzip2"
+            } else if xz {
+                "xz"
+            } else if lz4 {
+                "lz4"
+            } else {
+                "zstd" // default
+            };
+            
+            let path_obj = std::path::Path::new(&path);
+            if path_obj.is_dir() {
+                match process_directory_compress(path_obj, algo, verify, progress, force, recursive) {
+                    Ok(_) => process::exit(0),
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        process::exit(1);
+                    }
                 }
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    process::exit(1);
+            } else {
+                match compress_file(&path, algo, verify, progress, force) {
+                    Ok(_output_path) => {
+                        process::exit(0);
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        process::exit(1);
+                    }
                 }
             }
         }
-        Commands::Decompress { verify, progress, force, file } => {
-            match decompress_file(&file, verify, progress, force) {
-                Ok(_output_path) => {
-                    process::exit(0);
+        Commands::Decompress { verify, progress, force, recursive, path } => {
+            let path_obj = std::path::Path::new(&path);
+            if path_obj.is_dir() {
+                match process_directory_decompress(path_obj, verify, progress, force, recursive) {
+                    Ok(_) => process::exit(0),
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        process::exit(1);
+                    }
                 }
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    process::exit(1);
+            } else {
+                match decompress_file(&path, verify, progress, force) {
+                    Ok(_output_path) => {
+                        process::exit(0);
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        process::exit(1);
+                    }
                 }
             }
         }
@@ -1722,6 +1777,142 @@ fn detect_compression(path: &Path) -> Result<Option<String>, String> {
     }
 }
 
+fn process_directory_compress(
+    dir_path: &Path,
+    algorithm: &str,
+    verify: bool,
+    show_progress: bool,
+    force: bool,
+    recursive: bool
+) -> Result<(), String> {
+    use std::fs;
+    
+    let entries = fs::read_dir(dir_path)
+        .map_err(|e| format!("Failed to read directory {}: {}", dir_path.display(), e))?;
+    
+    let mut success_count = 0;
+    let mut error_count = 0;
+    let mut errors = Vec::new();
+    
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                errors.push(format!("Failed to read directory entry: {}", e));
+                error_count += 1;
+                continue;
+            }
+        };
+        
+        let path = entry.path();
+        
+        if path.is_dir() {
+            if recursive {
+                match process_directory_compress(&path, algorithm, verify, show_progress, force, recursive) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        errors.push(format!("{}: {}", path.display(), e));
+                        error_count += 1;
+                    }
+                }
+            }
+        } else {
+            // Check if it's an STDF file (*.std or *.stdf)
+            if let Some(ext) = path.extension() {
+                let ext_str = ext.to_string_lossy().to_lowercase();
+                if ext_str == "std" || ext_str == "stdf" {
+                    match compress_file(path.to_str().unwrap(), algorithm, verify, show_progress, force) {
+                        Ok(_) => success_count += 1,
+                        Err(e) => {
+                            errors.push(format!("{}: {}", path.display(), e));
+                            error_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if error_count > 0 {
+        eprintln!("\n{} file(s) compressed successfully, {} error(s):", success_count, error_count);
+        for error in errors {
+            eprintln!("  {}", error);
+        }
+        Err(format!("Failed to compress {} file(s)", error_count))
+    } else if success_count == 0 {
+        Err(format!("No STDF files found in {}", dir_path.display()))
+    } else {
+        println!("\n{} file(s) compressed successfully", success_count);
+        Ok(())
+    }
+}
+
+fn process_directory_decompress(
+    dir_path: &Path,
+    verify: bool,
+    show_progress: bool,
+    force: bool,
+    recursive: bool
+) -> Result<(), String> {
+    use std::fs;
+    
+    let entries = fs::read_dir(dir_path)
+        .map_err(|e| format!("Failed to read directory {}: {}", dir_path.display(), e))?;
+    
+    let mut success_count = 0;
+    let mut error_count = 0;
+    let mut errors = Vec::new();
+    
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                errors.push(format!("Failed to read directory entry: {}", e));
+                error_count += 1;
+                continue;
+            }
+        };
+        
+        let path = entry.path();
+        
+        if path.is_dir() {
+            if recursive {
+                match process_directory_decompress(&path, verify, show_progress, force, recursive) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        errors.push(format!("{}: {}", path.display(), e));
+                        error_count += 1;
+                    }
+                }
+            }
+        } else {
+            // Check if file is compressed
+            if let Ok(Some(_compression)) = detect_compression(&path) {
+                match decompress_file(path.to_str().unwrap(), verify, show_progress, force) {
+                    Ok(_) => success_count += 1,
+                    Err(e) => {
+                        errors.push(format!("{}: {}", path.display(), e));
+                        error_count += 1;
+                    }
+                }
+            }
+        }
+    }
+    
+    if error_count > 0 {
+        eprintln!("\n{} file(s) decompressed successfully, {} error(s):", success_count, error_count);
+        for error in errors {
+            eprintln!("  {}", error);
+        }
+        Err(format!("Failed to decompress {} file(s)", error_count))
+    } else if success_count == 0 {
+        Err(format!("No compressed files found in {}", dir_path.display()))
+    } else {
+        println!("\n{} file(s) decompressed successfully", success_count);
+        Ok(())
+    }
+}
+
 fn compress_file(input_path: &str, algorithm: &str, verify: bool, show_progress: bool, force: bool) -> Result<String, String> {
     let path = Path::new(input_path);
     
@@ -2052,7 +2243,7 @@ fn compress_with_progress(input: &str, output: &str, algorithm: &str) -> Result<
     let pb = ProgressBar::new(file_size);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
             .unwrap()
             .progress_chars("#>-")
     );
@@ -2114,7 +2305,7 @@ fn decompress_with_progress(input: &str, output: &str, algorithm: &str) -> Resul
     let pb = ProgressBar::new(file_size);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
             .unwrap()
             .progress_chars("#>-")
     );

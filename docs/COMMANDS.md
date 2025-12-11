@@ -281,27 +281,27 @@
 
 ## stdf compress
 
-- stdf compress [`algorithm`] [`-v`] [`-p`] [`-f`] `<file>`
+- stdf compress [`--gzip`|`--gz`|`--zlib`|`--z`|`--bzip2`|`--bz2`|`--xz`|`--lzma`|`--zstd`|`--zst`|`--lz4`] [`-v`] [`-p`] [`-f`] `<file>`
 
-    The supported `algorithm`s are :
-        `gzip` or `gz` --> `.gz` extension
-        `zlib` or `z` --> `.z` extension
-        `bzip2` or `bz2` --> `.bz2` extension
-        `xz` or `lzma` --> `.xz` extension
-        `zstd` or `zst` --> `.zst` extension --> default
-        `lz4` --> `.lz4` extension
+    The supported compression formats (specified as flags):
+        `--gzip` or `--gz` --> `.gz` extension
+        `--zlib` or `--z` --> `.z` extension
+        `--bzip2` or `--bz2` --> `.bz2` extension
+        `--xz` or `--lzma` --> `.xz` extension
+        `--zstd` or `--zst` --> `.zst` extension --> default if no flag given
+        `--lz4` --> `.lz4` extension
 
     This will first check if `<file>` is compressed (indicative?).
     If it *IS NOT* compressed, the file will be compressed by using the given `algorithm` (and the file will be put along side the original).
     If the file *IS* compressed, it depends if the file is compressed in a supported algorithm.
 
-    1. if it is compressed in a supported algorithm, it will be first de-compressed, and then re compressed with the given `algorithm`.
+    1. if it is compressed in a supported algorithm, it will be first de-compressed, and then re compressed with the specified format.
       The intermediate decompressed file will be removed after the re-compression.
 
     2. if it is compressed in a *NONE* supported algorithm, then print a message saying that the given file is compressed in an non-supported 
       compression, and that the user should use a tool to decompress the file.
 
-    If no `algorithm` is provided, `zstd` is used.
+    If no compression flag is provided, `--zstd` is used by default.
 
     The `-v` (or alternatively `--verify`) parameter is given, then we calculate the SHA-256 hash on the bare .std[f] file prior to compression, and
     compare it after compression to the "on the fly" decompressed file's hash. If the hashes are the same, we can clean up (if needed).
