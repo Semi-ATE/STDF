@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use clap::{Parser, Subcommand};
 use stdf_lib::parsers::StdfParser;
+use indicatif::MultiProgress;
 
 /// Semi-ATE STDF Tool - Fast STDF file parser and analyzer
 #[derive(Parser)]
@@ -43,32 +44,6 @@ enum Commands {
     Is {
         /// Test type: ft, ws, hot, cold, room, truncated, complete
         test_type: String,
-        /// STDF file path
-        file: String,
-    },
-    /// Get file endianness (LE or BE)
-    Endian {
-        /// STDF file path
-        file: String,
-    },
-    /// Get lot ID
-    Lot {
-        /// STDF file path
-        file: String,
-    },
-    /// Get tester name or type
-    Tester {
-        /// Get tester type instead of name
-        #[arg(long)]
-        type_only: bool,
-        /// STDF file path
-        file: String,
-    },
-    /// Get test temperature
-    Temperature {
-        /// Parse temperature as integer
-        #[arg(long)]
-        int: bool,
         /// STDF file path
         file: String,
     },
@@ -126,13 +101,43 @@ enum Commands {
         #[arg(short, long)]
         progress: bool,
         /// Force overwrite if output file exists
-        #[arg(short, long)]
+        #[arg(short, long, conflicts_with = "skip")]
         force: bool,
+        /// Skip files that already exist
+        #[arg(short, long, conflicts_with = "force")]
+        skip: bool,
         /// Recursively process directories
         #[arg(short, long)]
         recursive: bool,
         /// STDF file or directory path
         path: String,
+        /// Optional output directory path (default: same as input file location)
+        output: Option<String>,
+    },
+    /// Create archive from STDF files
+    Archive {
+        /// Use ZIP format
+        #[arg(long, conflicts_with_all = ["tar", "sevenz"])]
+        zip: bool,
+        /// Use TAR format
+        #[arg(long, conflicts_with_all = ["zip", "sevenz"])]
+        tar: bool,
+        /// Use 7z format
+        #[arg(long, visible_alias = "7z", conflicts_with_all = ["zip", "tar"])]
+        sevenz: bool,
+        /// Recursively add all files when path is a directory
+        #[arg(short, long)]
+        recursive: bool,
+        /// Force overwrite if output file exists
+        #[arg(short, long)]
+        force: bool,
+        /// Show progress bar
+        #[arg(short, long)]
+        progress: bool,
+        /// File or directory path to archive
+        path: String,
+        /// Optional output archive path (default: path name with appropriate extension)
+        output: Option<String>,
     },
 }
 
@@ -223,12 +228,40 @@ enum ShowCommands {
         #[arg(short = 'n', long)]
         limit: Option<i32>,
     },
+    /// Get file endianness (LE or BE)
+    Endian {
+        /// STDF file path
+        file: String,
+    },
+    /// Get lot ID
+    Lot {
+        /// STDF file path
+        file: String,
+    },
+    /// Get tester name or type
+    Tester {
+        /// Get tester type instead of name
+        #[arg(long)]
+        type_only: bool,
+        /// STDF file path
+        file: String,
+    },
+    /// Get test temperature
+    Temperature {
+        /// Parse temperature as integer
+        #[arg(long)]
+        int: bool,
+        /// STDF file path
+        file: String,
+    },
 }
 
 #[derive(Subcommand)]
 enum ShowSupportedCommands {
     /// List supported compression formats
     Compressions,
+    /// List supported decompression formats
+    Decompressions,
 }
 
 #[derive(Subcommand)]
@@ -473,77 +506,6 @@ fn main() {
                 }
             }
         }
-        Commands::Endian { file } => {
-            match get_endian(&file) {
-                Ok(endian) => {
-                    println!("{}", endian);
-                    process::exit(0);
-                }
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    process::exit(1);
-                }
-            }
-        }
-        Commands::Lot { file } => {
-            match get_lot_id(&file) {
-                Ok(lot_id) => {
-                    println!("{}", lot_id);
-                    process::exit(0);
-                }
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    process::exit(1);
-                }
-            }
-        }
-        Commands::Tester { type_only, file } => {
-            if type_only {
-                match get_tester_type(&file) {
-                    Ok(tester_type) => {
-                        println!("{}", tester_type);
-                        process::exit(0);
-                    }
-                    Err(e) => {
-                        eprintln!("Error: {:?}", e);
-                        process::exit(1);
-                    }
-                }
-            } else {
-                match get_tester(&file) {
-                    Ok(tester) => {
-                        println!("{}", tester);
-                        process::exit(0);
-                    }
-                    Err(e) => {
-                        eprintln!("Error: {:?}", e);
-                        process::exit(1);
-                    }
-                }
-            }
-        }
-        Commands::Temperature { int, file } => {
-            match get_temperature(&file) {
-                Ok(temp) => {
-                    if int {
-                        match parse_temperature_as_int(&temp) {
-                            Ok(value) => println!("{}", value),
-                            Err(e) => {
-                                eprintln!("Error parsing temperature as int: {}", e);
-                                process::exit(1);
-                            }
-                        }
-                    } else {
-                        println!("{}", temp);
-                    }
-                    process::exit(0);
-                }
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    process::exit(1);
-                }
-            }
-        }
         Commands::Show { subcommand } => {
             match subcommand {
                 ShowCommands::Records => {
@@ -558,10 +520,94 @@ fn main() {
                             println!("zstd : .zst (default)");
                             println!("lz4 : .lz4");
                         }
+                        ShowSupportedCommands::Decompressions => {
+                            println!("Compression formats:");
+                            println!("  gzip/zlib : .gz, .z");
+                            println!("  bzip2 : .bz2");
+                            println!("  xz/LZMA : .xz");
+                            println!("  zstd : .zst");
+                            println!("  lz4 : .lz4");
+                            println!("\nArchive formats:");
+                            println!("  7-Zip : .7z");
+                            println!("  ZIP : .zip");
+                            println!("  TAR : .tar");
+                            println!("\n(All formats auto-detected from file magic bytes)");
+                        }
                     }
                 }
                 ShowCommands::Field { record_type, field, file, limit } => {
                     handle_show_command_new(&record_type, &field, &file, limit);
+                }
+                ShowCommands::Endian { file } => {
+                    match get_endian(&file) {
+                        Ok(endian) => {
+                            println!("{}", endian);
+                            process::exit(0);
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {:?}", e);
+                            process::exit(1);
+                        }
+                    }
+                }
+                ShowCommands::Lot { file } => {
+                    match get_lot_id(&file) {
+                        Ok(lot_id) => {
+                            println!("{}", lot_id);
+                            process::exit(0);
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {:?}", e);
+                            process::exit(1);
+                        }
+                    }
+                }
+                ShowCommands::Tester { type_only, file } => {
+                    if type_only {
+                        match get_tester_type(&file) {
+                            Ok(tester_type) => {
+                                println!("{}", tester_type);
+                                process::exit(0);
+                            }
+                            Err(e) => {
+                                eprintln!("Error: {:?}", e);
+                                process::exit(1);
+                            }
+                        }
+                    } else {
+                        match get_tester(&file) {
+                            Ok(tester) => {
+                                println!("{}", tester);
+                                process::exit(0);
+                            }
+                            Err(e) => {
+                                eprintln!("Error: {:?}", e);
+                                process::exit(1);
+                            }
+                        }
+                    }
+                }
+                ShowCommands::Temperature { int, file } => {
+                    match get_temperature(&file) {
+                        Ok(temp) => {
+                            if int {
+                                match parse_temperature_as_int(&temp) {
+                                    Ok(value) => println!("{}", value),
+                                    Err(e) => {
+                                        eprintln!("Error parsing temperature as int: {}", e);
+                                        process::exit(1);
+                                    }
+                                }
+                            } else {
+                                println!("{}", temp);
+                            }
+                            process::exit(0);
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {:?}", e);
+                            process::exit(1);
+                        }
+                    }
                 }
             }
         }
@@ -601,10 +647,10 @@ fn main() {
                 }
             }
         }
-        Commands::Decompress { verify, progress, force, recursive, path } => {
+        Commands::Decompress { verify, progress, force, skip, recursive, path, output } => {
             let path_obj = std::path::Path::new(&path);
             if path_obj.is_dir() {
-                match process_directory_decompress(path_obj, verify, progress, force, recursive) {
+                match process_directory_decompress(path_obj, verify, progress, force, skip, recursive, output.as_deref()) {
                     Ok(_) => process::exit(0),
                     Err(e) => {
                         eprintln!("Error: {}", e);
@@ -612,7 +658,7 @@ fn main() {
                     }
                 }
             } else {
-                match decompress_file(&path, verify, progress, force) {
+                match decompress_file(&path, verify, progress, force, skip, output.as_deref()) {
                     Ok(_output_path) => {
                         process::exit(0);
                     }
@@ -620,6 +666,29 @@ fn main() {
                         eprintln!("Error: {}", e);
                         process::exit(1);
                     }
+                }
+            }
+        }
+        Commands::Archive { zip, tar, sevenz, recursive, force, progress, path, output } => {
+            // Determine archive format - default to 7z if none specified
+            let format = if zip {
+                "zip"
+            } else if tar {
+                "tar"
+            } else {
+                "7z" // Default format
+            };
+            
+            match create_archive(&path, output.as_deref(), format, force, recursive, progress) {
+                Ok(archive_path) => {
+                    if !progress {
+                        println!("✓ Created {} archive: {}", format, archive_path);
+                    }
+                    process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
                 }
             }
         }
@@ -1757,7 +1826,8 @@ fn calculate_sha256<P: AsRef<Path>>(path: P) -> Result<String, std::io::Error> {
 
 fn detect_compression(path: &Path) -> Result<Option<String>, String> {
     let mut file = File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
-    let mut buffer = vec![0u8; 16];
+    // TAR magic bytes are at offset 257, so we need at least 262 bytes for detection
+    let mut buffer = vec![0u8; 262];
     file.read(&mut buffer).map_err(|e| format!("Failed to read file: {}", e))?;
     
     // Use infer crate to detect file type
@@ -1768,6 +1838,7 @@ fn detect_compression(path: &Path) -> Result<Option<String>, String> {
             "application/x-xz" => Ok(Some("xz".to_string())),
             "application/zstd" => Ok(Some("zstd".to_string())),
             "application/x-lz4" => Ok(Some("lz4".to_string())),
+            "application/x-7z-compressed" => Ok(Some("7z".to_string())),
             "application/zip" => Ok(Some("zip".to_string())),
             "application/x-tar" => Ok(Some("tar".to_string())),
             _ => Ok(None),
@@ -1847,51 +1918,229 @@ fn process_directory_compress(
     }
 }
 
+fn get_archive_output_files(archive_path: &Path, compression: &str, output_dir: &Path) -> Result<Vec<std::path::PathBuf>, String> {
+    use std::fs::File;
+    use std::path::PathBuf;
+    
+    match compression {
+        "7z" => {
+            use sevenz_rust::Archive;
+            let mut file = File::open(archive_path)
+                .map_err(|e| format!("Failed to open 7z archive: {}", e))?;
+            let len = file.metadata()
+                .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                .len();
+            let archive = Archive::read(&mut file, len, &[])
+                .map_err(|e| format!("Failed to read 7z archive: {}", e))?;
+            
+            Ok(archive.files.iter()
+                .filter(|e| !e.is_directory() && e.has_stream())
+                .map(|e| output_dir.join(e.name()))
+                .collect())
+        },
+        "zip" => {
+            use zip::ZipArchive;
+            let file = File::open(archive_path)
+                .map_err(|e| format!("Failed to open ZIP archive: {}", e))?;
+            let mut archive = ZipArchive::new(file)
+                .map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+            
+            let mut files = Vec::new();
+            for i in 0..archive.len() {
+                if let Ok(entry) = archive.by_index(i) {
+                    if !entry.is_dir() {
+                        files.push(output_dir.join(entry.name()));
+                    }
+                }
+            }
+            Ok(files)
+        },
+        "tar" => {
+            use tar::Archive;
+            let file = File::open(archive_path)
+                .map_err(|e| format!("Failed to open TAR archive: {}", e))?;
+            let mut archive = Archive::new(file);
+            
+            let mut files = Vec::new();
+            for entry in archive.entries().map_err(|e| format!("Failed to read TAR entries: {}", e))? {
+                if let Ok(entry) = entry {
+                    if let Ok(path) = entry.path() {
+                        files.push(output_dir.join(path));
+                    }
+                }
+            }
+            Ok(files)
+        },
+        _ => Err(format!("Unsupported archive format: {}", compression))
+    }
+}
+
+fn get_streaming_output_file(compressed_path: &Path, output_dir: Option<&str>) -> std::path::PathBuf {
+    use std::path::PathBuf;
+    
+    let output_path = if let Some(out_dir) = output_dir {
+        Path::new(out_dir)
+    } else {
+        compressed_path.parent().unwrap_or(Path::new("."))
+    };
+    
+    // Remove compression extension
+    let stem = compressed_path.file_stem().unwrap().to_string_lossy();
+    output_path.join(stem.as_ref())
+}
+
 fn process_directory_decompress(
     dir_path: &Path,
     verify: bool,
     show_progress: bool,
     force: bool,
-    recursive: bool
+    skip: bool,
+    recursive: bool,
+    output_dir: Option<&str>
 ) -> Result<(), String> {
     use std::fs;
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+    use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
     
-    let entries = fs::read_dir(dir_path)
-        .map_err(|e| format!("Failed to read directory {}: {}", dir_path.display(), e))?;
+    // Step 1: Collect all files in directory
+    let mut all_files = Vec::new();
+    fn collect_all_files(dir: &Path, recursive: bool, files: &mut Vec<std::path::PathBuf>) -> Result<(), String> {
+        let entries = fs::read_dir(dir)
+            .map_err(|e| format!("Failed to read directory {}: {}", dir.display(), e))?;
+        
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    if recursive {
+                        collect_all_files(&path, recursive, files)?;
+                    }
+                } else {
+                    files.push(path);
+                }
+            }
+        }
+        Ok(())
+    }
+    collect_all_files(dir_path, recursive, &mut all_files)?;
     
+    // Step 2 & 3: Filter to compressed files with supported formats
+    // Build HashMap: source_file -> Vec<output_files>
+    let mut decompress_map: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
+    
+    for file_path in all_files {
+        if let Ok(Some(compression)) = detect_compression(&file_path) {
+            if is_supported_compression(&compression) || is_archive_format(&compression) {
+                decompress_map.insert(file_path, Vec::new());
+            }
+        }
+    }
+    
+    if decompress_map.is_empty() {
+        return Err(format!("No supported compressed files found in {}", dir_path.display()));
+    }
+    
+    // Step 4: Populate output file lists
+    let output_base = if let Some(out_dir) = output_dir {
+        PathBuf::from(out_dir)
+    } else {
+        dir_path.to_path_buf()
+    };
+    
+    for (source_path, output_files) in decompress_map.iter_mut() {
+        let compression = detect_compression(source_path)?.unwrap();
+        
+        if is_archive_format(&compression) {
+            // Archive: get list of files inside
+            match get_archive_output_files(source_path, &compression, &output_base) {
+                Ok(files) => *output_files = files,
+                Err(e) => {
+                    eprintln!("Warning: Failed to read archive {}: {}", source_path.display(), e);
+                    continue;
+                }
+            }
+        } else {
+            // Streaming compression: single output file
+            output_files.push(get_streaming_output_file(source_path, output_dir));
+        }
+    }
+    
+    // Step 5 & 6: Check for conflicts and decompress
+    let mut to_process = decompress_map.clone();
+    let mut unprocessed: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
     let mut success_count = 0;
     let mut error_count = 0;
     let mut errors = Vec::new();
     
-    for entry in entries {
-        let entry = match entry {
-            Ok(e) => e,
-            Err(e) => {
-                errors.push(format!("Failed to read directory entry: {}", e));
-                error_count += 1;
-                continue;
+    // Check conflicts if not force mode
+    if !force && !skip {
+        // No mode specified: skip files with conflicts
+        to_process.retain(|source, outputs| {
+            let has_conflict = outputs.iter().any(|p| p.exists());
+            if has_conflict {
+                unprocessed.insert(source.clone(), outputs.clone());
+                false
+            } else {
+                true
             }
-        };
-        
-        let path = entry.path();
-        
-        if path.is_dir() {
-            if recursive {
-                match process_directory_decompress(&path, verify, show_progress, force, recursive) {
-                    Ok(_) => {},
+        });
+    } else if skip {
+        // Skip mode: skip files with conflicts
+        to_process.retain(|source, outputs| {
+            let has_conflict = outputs.iter().any(|p| p.exists());
+            if has_conflict {
+                unprocessed.insert(source.clone(), outputs.clone());
+                false
+            } else {
+                true
+            }
+        });
+    }
+    // force mode: process all files
+    
+    // Decompress files
+    if to_process.len() == 1 && show_progress {
+        // Single file: show its own progress
+        let (source, _) = to_process.iter().next().unwrap();
+        match decompress_file(source.to_str().unwrap(), verify, true, force, skip, output_dir) {
+            Ok(_) => success_count += 1,
+            Err(e) => {
+                errors.push(format!("{}: {}", source.display(), e));
+                error_count += 1;
+            }
+        }
+    } else if !to_process.is_empty() {
+        // Multiple files or no progress: show overall progress only
+        if show_progress {
+            let multi = MultiProgress::new();
+            let overall_pb = multi.add(ProgressBar::new(to_process.len() as u64));
+            overall_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("Decompressing files\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} files ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            overall_pb.tick();  // Force initial render
+            
+            for (source, _) in to_process.iter() {
+                match decompress_file_with_multi(source.to_str().unwrap(), verify, force, skip, output_dir, Some(&multi)) {
+                    Ok(_) => success_count += 1,
                     Err(e) => {
-                        errors.push(format!("{}: {}", path.display(), e));
+                        errors.push(format!("{}: {}", source.display(), e));
                         error_count += 1;
                     }
                 }
+                overall_pb.inc(1);
             }
+            
+            overall_pb.finish_and_clear();
         } else {
-            // Check if file is compressed
-            if let Ok(Some(_compression)) = detect_compression(&path) {
-                match decompress_file(path.to_str().unwrap(), verify, show_progress, force) {
+            for (source, _) in to_process.iter() {
+                match decompress_file(source.to_str().unwrap(), verify, false, force, skip, output_dir) {
                     Ok(_) => success_count += 1,
                     Err(e) => {
-                        errors.push(format!("{}: {}", path.display(), e));
+                        errors.push(format!("{}: {}", source.display(), e));
                         error_count += 1;
                     }
                 }
@@ -1899,16 +2148,30 @@ fn process_directory_decompress(
         }
     }
     
+    // Report results
     if error_count > 0 {
         eprintln!("\n{} file(s) decompressed successfully, {} error(s):", success_count, error_count);
         for error in errors {
             eprintln!("  {}", error);
         }
-        Err(format!("Failed to decompress {} file(s)", error_count))
-    } else if success_count == 0 {
-        Err(format!("No compressed files found in {}", dir_path.display()))
-    } else {
+    } else if success_count > 0 {
         println!("\n{} file(s) decompressed successfully", success_count);
+    }
+    
+    // Report unprocessed files
+    if !unprocessed.is_empty() {
+        println!("\n{} file(s) skipped due to existing output files:", unprocessed.len());
+        for (source, conflicts) in unprocessed.iter() {
+            println!("  {}", source.display());
+            for conflict in conflicts.iter().filter(|p| p.exists()) {
+                println!("    ✗ {}", conflict.display());
+            }
+        }
+    }
+    
+    if error_count > 0 {
+        Err(format!("Failed to decompress {} file(s)", error_count))
+    } else {
         Ok(())
     }
 }
@@ -2000,7 +2263,90 @@ fn compress_file(input_path: &str, algorithm: &str, verify: bool, show_progress:
     Ok(output_path)
 }
 
-fn decompress_file(input_path: &str, verify: bool, show_progress: bool, force: bool) -> Result<String, String> {
+fn decompress_file_with_multi(input_path: &str, verify: bool, force: bool, skip: bool, output_dir: Option<&str>, multi: Option<&MultiProgress>) -> Result<String, String> {
+    let path = Path::new(input_path);
+    
+    if !path.exists() {
+        return Err(format!("File not found: {}", input_path));
+    }
+    
+    let show_progress = multi.is_some();
+    
+    // Detect compression format
+    let compression = detect_compression(path)?;
+    
+    if compression.is_none() {
+        return Err("File is not compressed".to_string());
+    }
+    
+    let compression_format = compression.unwrap();
+    
+    // Check if it's an archive format and handle differently
+    if is_archive_format(&compression_format) {
+        return extract_archive_with_multi(input_path, &compression_format, force, skip, show_progress, output_dir, multi);
+    }
+    
+    if !is_supported_compression(&compression_format) {
+        return Err(format!(
+            "File is compressed with unsupported format '{}'. Supported formats: gzip, bzip2, xz, zstd, lz4, 7z, zip, tar",
+            compression_format
+        ));
+    }
+    
+    // Calculate hash of compressed file if verify is enabled
+    let compressed_hash = if verify {
+        if !show_progress {
+            println!("Calculating SHA-256 hash of compressed file...");
+        }
+        Some(calculate_sha256(input_path).map_err(|e| format!("Failed to calculate hash: {}", e))?)
+    } else {
+        None
+    };
+    
+    // Determine output path (remove compression extension)
+    let output_path = get_decompressed_path(input_path);
+    
+    // Check if output file already exists
+    if Path::new(&output_path).exists() && !force {
+        return Err(format!("Output file already exists: {}. Use -f/--force to overwrite.", output_path));
+    }
+    
+    if show_progress {
+        decompress_with_progress(input_path, &output_path, &compression_format)?;
+    } else {
+        use std::io::{self, Write};
+        print!("Decompressing {} to {} ... ", compression_format, output_path);
+        io::stdout().flush().unwrap();
+        decompress_with_algorithm(input_path, &output_path, &compression_format)?;
+        println!("Done.");
+    }
+    
+    // Verify if requested
+    if verify && compressed_hash.is_some() {
+        if !show_progress {
+            println!("Verifying decompression integrity...");
+        }
+        // Re-compress and compare hashes
+        let temp_compressed = format!("{}.verify_temp", input_path);
+        compress_with_algorithm(&output_path, &temp_compressed, &compression_format)?;
+        
+        let verify_hash = calculate_sha256(&temp_compressed).map_err(|e| format!("Failed to calculate verify hash: {}", e))?;
+        std::fs::remove_file(&temp_compressed).map_err(|e| format!("Failed to cleanup temp file: {}", e))?;
+        
+        if Some(verify_hash) != compressed_hash {
+            let _ = std::fs::remove_file(&output_path);
+            return Err("Verification failed: Hash mismatch after decompression".to_string());
+        }
+        
+        if !show_progress {
+            println!("✓ Verification successful: Hashes match");
+        }
+    }
+    
+    Ok(output_path)
+}
+
+fn decompress_file(input_path: &str, verify: bool, show_progress: bool, force: bool, skip: bool, output_dir: Option<&str>) -> Result<String, String> {
     let path = Path::new(input_path);
     
     if !path.exists() {
@@ -2016,9 +2362,14 @@ fn decompress_file(input_path: &str, verify: bool, show_progress: bool, force: b
     
     let compression_format = compression.unwrap();
     
+    // Check if it's an archive format and handle differently
+    if is_archive_format(&compression_format) {
+        return extract_archive(input_path, &compression_format, force, skip, show_progress, output_dir);
+    }
+    
     if !is_supported_compression(&compression_format) {
         return Err(format!(
-            "File is compressed with unsupported format '{}'. Supported formats: gzip, bzip2, xz, zstd, lz4",
+            "File is compressed with unsupported format '{}'. Supported formats: gzip, bzip2, xz, zstd, lz4, 7z, zip, tar",
             compression_format
         ));
     }
@@ -2078,6 +2429,1183 @@ fn decompress_file(input_path: &str, verify: bool, show_progress: bool, force: b
 
 fn is_supported_compression(format: &str) -> bool {
     matches!(format, "gzip" | "bzip2" | "xz" | "zstd" | "lz4")
+}
+
+fn is_archive_format(format: &str) -> bool {
+    matches!(format, "7z" | "zip" | "tar")
+}
+
+fn extract_archive_with_multi(archive_path: &str, format: &str, force: bool, skip: bool, show_progress: bool, output_dir: Option<&str>, multi: Option<&MultiProgress>) -> Result<String, String> {
+    let path = Path::new(archive_path);
+    let output_path = if let Some(dir) = output_dir {
+        Path::new(dir)
+    } else {
+        path.parent().unwrap_or(Path::new("."))
+    };
+    
+    match format {
+        "7z" => extract_7z_with_multi(archive_path, output_path, force, skip, show_progress, multi),
+        "zip" => extract_zip_with_multi(archive_path, output_path, force, skip, show_progress, multi),
+        "tar" => extract_tar_with_multi(archive_path, output_path, force, skip, show_progress, multi),
+        _ => Err(format!("Unsupported archive format: {}", format))
+    }
+}
+
+fn extract_archive(archive_path: &str, format: &str, force: bool, skip: bool, show_progress: bool, output_dir: Option<&str>) -> Result<String, String> {
+    let path = Path::new(archive_path);
+    let output_path = if let Some(dir) = output_dir {
+        Path::new(dir)
+    } else {
+        path.parent().unwrap_or(Path::new("."))
+    };
+    
+    match format {
+        "7z" => extract_7z(archive_path, output_path, force, skip, show_progress),
+        "zip" => extract_zip(archive_path, output_path, force, skip, show_progress),
+        "tar" => extract_tar(archive_path, output_path, force, skip, show_progress),
+        _ => Err(format!("Unsupported archive format: {}", format))
+    }
+}
+
+fn extract_7z_with_multi(archive_path: &str, output_dir: &Path, force: bool, skip: bool, show_progress: bool, multi: Option<&MultiProgress>) -> Result<String, String> {
+    use sevenz_rust::Archive;
+    use std::fs::File;
+    use indicatif::{ProgressBar, ProgressStyle};
+    
+    // Note: sevenz_rust doesn't support skip mode, only force extraction
+    if skip {
+        return Err("Skip mode (-s/--skip) is not supported for .7z archives. Use -f/--force to overwrite.".to_string());
+    }
+    
+    // Open and read archive to get file list
+    let mut file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open 7z archive: {}", e))?;
+    let len = file.metadata()
+        .map_err(|e| format!("Failed to get file metadata: {}", e))?
+        .len();
+    
+    let archive = Archive::read(&mut file, len, &[])
+        .map_err(|e| format!("Failed to read 7z archive: {}", e))?;
+    
+    // Pre-check for existing files
+    if !force {
+        let mut conflicts = Vec::new();
+        for entry in &archive.files {
+            if !entry.is_directory() && entry.has_stream() {
+                let out_path = output_dir.join(entry.name());
+                if out_path.exists() {
+                    conflicts.push(out_path);
+                }
+            }
+        }
+        
+        if !conflicts.is_empty() {
+            return Err(format!(
+                "The following {} file(s) already exist:\\n  {}\\nUse -f/--force to overwrite.",
+                conflicts.len(),
+                conflicts.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join("\\n  ")
+            ));
+        }
+    }
+    
+    let file_count = archive.files.iter().filter(|e| !e.is_directory() && e.has_stream()).count();
+    let archive_name = Path::new(archive_path).file_name().unwrap().to_string_lossy();
+    
+    // Setup progress bars - use provided MultiProgress if available
+    if show_progress {
+        let file_pb = if let Some(mp) = multi {
+            // Use provided MultiProgress - create per-file progress bar as child
+            let pb = mp.add(ProgressBar::new(100));
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("  {msg}\n  {spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            pb
+        } else {
+            // No MultiProgress provided - create standalone progress bar
+            let pb = ProgressBar::new(100);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            pb
+        };
+        
+        drop(file); // Close the file before extraction
+        
+        // Use decompress_file_with_extract_fn to track progress
+        sevenz_rust::decompress_file_with_extract_fn(
+            archive_path,
+            output_dir,
+            |entry, reader, dest| {
+                use std::io::{Read, Write};
+                
+                if entry.is_directory() {
+                    std::fs::create_dir_all(dest)?;
+                    return Ok(true);
+                }
+                
+                if !entry.has_stream() {
+                    return Ok(true);
+                }
+                
+                // Setup progress for this file
+                file_pb.set_message(format!("Extracting: {}", entry.name()));
+                file_pb.set_length(entry.size());
+                file_pb.set_position(0);
+                
+                // Create parent directories
+                if let Some(parent) = dest.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                
+                // Extract file with progress tracking
+                let mut output_file = std::fs::File::create(dest)?;
+                let mut buffer = vec![0u8; 131072]; // 128KB chunks
+                let mut total_written = 0u64;
+                
+                loop {
+                    let bytes_read = reader.read(&mut buffer)?;
+                    if bytes_read == 0 {
+                        break;
+                    }
+                    output_file.write_all(&buffer[..bytes_read])?;
+                    total_written += bytes_read as u64;
+                    file_pb.set_position(total_written);
+                }
+                
+                Ok(true)
+            }
+        ).map_err(|e| format!("Failed to extract 7z archive: {}", e))?;
+        
+        file_pb.finish_and_clear();
+    } else {
+        drop(file); // Close the file before extraction
+        sevenz_rust::decompress_file(archive_path, output_dir)
+            .map_err(|e| format!("Failed to extract 7z archive: {}", e))?;
+        println!("✓ Extracted {} file(s) to {}", file_count, output_dir.display());
+    }
+    
+    Ok(format!("Extracted {} files from 7z archive", file_count))
+}
+
+fn extract_7z(archive_path: &str, output_dir: &Path, force: bool, skip: bool, show_progress: bool) -> Result<String, String> {
+    use sevenz_rust::Archive;
+    use std::fs::File;
+    use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+    
+    // Note: sevenz_rust doesn't support skip mode, only force extraction
+    if skip {
+        return Err("Skip mode (-s/--skip) is not supported for .7z archives. Use -f/--force to overwrite.".to_string());
+    }
+    
+    // Open and read archive to get file list
+    let mut file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open 7z archive: {}", e))?;
+    let len = file.metadata()
+        .map_err(|e| format!("Failed to get file metadata: {}", e))?
+        .len();
+    
+    let archive = Archive::read(&mut file, len, &[])
+        .map_err(|e| format!("Failed to read 7z archive: {}", e))?;
+    
+    // Pre-check for existing files
+    if !force {
+        let mut conflicts = Vec::new();
+        for entry in &archive.files {
+            if !entry.is_directory() && entry.has_stream() {
+                let out_path = output_dir.join(entry.name());
+                if out_path.exists() {
+                    conflicts.push(out_path);
+                }
+            }
+        }
+        
+        if !conflicts.is_empty() {
+            return Err(format!(
+                "The following {} file(s) already exist:\n  {}\nUse -f/--force to overwrite.",
+                conflicts.len(),
+                conflicts.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join("\n  ")
+            ));
+        }
+    }
+    
+    let file_count = archive.files.iter().filter(|e| !e.is_directory() && e.has_stream()).count();
+    
+    // Setup progress bars
+    if show_progress {
+        // For single file archives, only show per-file progress
+        // For multi-file archives, show both overall and per-file progress
+        let (overall_pb, file_pb) = if file_count == 1 {
+            // Single file: just per-file progress bar
+            let pb = ProgressBar::new(100);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            (ProgressBar::hidden(), pb)
+        } else {
+            // Multiple files: both progress bars
+            let multi_progress = MultiProgress::new();
+            
+            let overall_pb = multi_progress.add(ProgressBar::new(file_count as u64));
+            overall_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} files ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            overall_pb.set_message(format!("Extracting 7z archive to {}", output_dir.display()));
+            
+            let file_pb = multi_progress.add(ProgressBar::new(100));
+            file_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("  {msg}\n  {spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            
+            (overall_pb, file_pb)
+        };
+        
+        drop(file); // Close the file before extraction
+        
+        // Use decompress_file_with_extract_fn to track progress
+        sevenz_rust::decompress_file_with_extract_fn(
+            archive_path,
+            output_dir,
+            |entry, reader, dest| {
+                use std::io::{Read, Write};
+                
+                if entry.is_directory() {
+                    // Create directory
+                    std::fs::create_dir_all(dest)?;
+                    return Ok(true);
+                }
+                
+                if !entry.has_stream() {
+                    return Ok(true);
+                }
+                
+                // Setup progress for this file
+                file_pb.set_length(entry.size());
+                file_pb.set_position(0);
+                
+                // Create parent directories
+                if let Some(parent) = dest.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                
+                // Extract file with progress tracking
+                let mut output_file = std::fs::File::create(dest)?;
+                let mut buffer = vec![0u8; 131072]; // 128KB chunks
+                let mut total_written = 0u64;
+                
+                loop {
+                    let bytes_read = reader.read(&mut buffer)?;
+                    if bytes_read == 0 {
+                        break;
+                    }
+                    output_file.write_all(&buffer[..bytes_read])?;
+                    total_written += bytes_read as u64;
+                    file_pb.set_position(total_written);
+                }
+                
+                // Increment overall progress after file is complete
+                overall_pb.inc(1);
+                
+                Ok(true)
+            }
+        ).map_err(|e| format!("Failed to extract 7z archive: {}", e))?;
+        
+        overall_pb.finish_and_clear();
+        file_pb.finish_and_clear();
+    } else {
+        drop(file); // Close the file before extraction
+        sevenz_rust::decompress_file(archive_path, output_dir)
+            .map_err(|e| format!("Failed to extract 7z archive: {}", e))?;
+    }
+    
+    if show_progress {
+        println!("✓ Extracted {} file(s) to {}", file_count, output_dir.display());
+    }
+    Ok(output_dir.to_string_lossy().to_string())
+}
+
+fn extract_zip_with_multi(archive_path: &str, output_dir: &Path, force: bool, skip: bool, show_progress: bool, multi: Option<&MultiProgress>) -> Result<String, String> {
+    use zip::ZipArchive;
+    use std::fs;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::io::{Read, Write};
+    
+    let file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open ZIP archive: {}", e))?;
+    
+    let mut archive = ZipArchive::new(file)
+        .map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+    
+    // Count files (not directories)
+    let file_count = (0..archive.len())
+        .filter(|&i| {
+            archive.by_index(i)
+                .map(|f| !f.is_dir())
+                .unwrap_or(false)
+        })
+        .count();
+    
+    // Pre-check for existing files
+    let mut conflicts = Vec::new();
+    for i in 0..archive.len() {
+        let file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+        
+        if let Some(path) = file.enclosed_name() {
+            let outpath = output_dir.join(path);
+            if outpath.exists() && !file.is_dir() {
+                conflicts.push(outpath);
+            }
+        }
+    }
+    
+    if !conflicts.is_empty() && !force && !skip {
+        return Err(format!(
+            "The following {} file(s) already exist:\\n  {}\\nUse -f/--force to overwrite or -s/--skip to skip existing files.",
+            conflicts.len(),
+            conflicts.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join("\\n  ")
+        ));
+    }
+    
+    // Setup progress bar - use provided MultiProgress if available
+    let file_pb = if show_progress {
+        if let Some(mp) = multi {
+            // Use provided MultiProgress - create per-file progress bar as child
+            let pb = mp.add(ProgressBar::new(100));
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("  {msg}\n  {spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            pb
+        } else {
+            // No MultiProgress provided - create standalone progress bar
+            let pb = ProgressBar::new(100);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta}}")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            pb
+        }
+    } else {
+        ProgressBar::hidden()
+    };
+    
+    let mut extracted = 0;
+    let mut skipped = 0;
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+        
+        let outpath = match file.enclosed_name() {
+            Some(path) => output_dir.join(path),
+            None => continue,
+        };
+        
+        if file.is_dir() {
+            fs::create_dir_all(&outpath)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(p)
+                        .map_err(|e| format!("Failed to create directory: {}", e))?;
+                }
+            }
+            
+            if outpath.exists() {
+                if skip {
+                    skipped += 1;
+                    continue;
+                } else if !force {
+                    return Err(format!("File already exists: {}", outpath.display()));
+                }
+            }
+            
+            if show_progress {
+                file_pb.set_length(file.size());
+                file_pb.set_position(0);
+                file_pb.set_message(format!("Extracting: {}", file.name()));
+            }
+            
+            let mut outfile = fs::File::create(&outpath)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            
+            let mut buffer = vec![0u8; 131072]; // 128KB chunks
+            let mut total_written = 0u64;
+            
+            loop {
+                let bytes_read = file.read(&mut buffer)
+                    .map_err(|e| format!("Failed to read from archive: {}", e))?;
+                if bytes_read == 0 {
+                    break;
+                }
+                outfile.write_all(&buffer[..bytes_read])
+                    .map_err(|e| format!("Failed to write to file: {}", e))?;
+                total_written += bytes_read as u64;
+                if show_progress {
+                    file_pb.set_position(total_written);
+                }
+            }
+            
+            extracted += 1;
+        }
+    }
+    
+    if show_progress {
+        file_pb.finish_and_clear();
+    } else {
+        println!("✓ Extracted {} file(s) to {}", extracted, output_dir.display());
+    }
+    
+    Ok(format!("Extracted {} files from ZIP archive", extracted))
+}
+
+fn extract_zip(archive_path: &str, output_dir: &Path, force: bool, skip: bool, show_progress: bool) -> Result<String, String> {
+    use zip::ZipArchive;
+    use std::fs;
+    use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+    use std::io::{Read, Write};
+    
+    let file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open ZIP archive: {}", e))?;
+    
+    let mut archive = ZipArchive::new(file)
+        .map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+    
+    // Count files (not directories)
+    let file_count = (0..archive.len())
+        .filter(|&i| {
+            archive.by_index(i)
+                .map(|f| !f.is_dir())
+                .unwrap_or(false)
+        })
+        .count();
+    
+    // Pre-check for existing files
+    let mut conflicts = Vec::new();
+    for i in 0..archive.len() {
+        let file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+        
+        if let Some(path) = file.enclosed_name() {
+            let outpath = output_dir.join(path);
+            if outpath.exists() && !file.is_dir() {
+                conflicts.push(outpath);
+            }
+        }
+    }
+    
+    if !conflicts.is_empty() && !force && !skip {
+        return Err(format!(
+            "The following {} file(s) already exist:\n  {}\nUse -f/--force to overwrite or -s/--skip to skip existing files.",
+            conflicts.len(),
+            conflicts.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join("\n  ")
+        ));
+    }
+    
+    // Setup progress bars
+    let (overall_pb, file_pb) = if show_progress {
+        if file_count == 1 {
+            // Single file: just per-file progress bar
+            let pb = ProgressBar::new(100);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            (ProgressBar::hidden(), pb)
+        } else {
+            // Multiple files: both progress bars
+            let multi_progress = MultiProgress::new();
+            
+            let overall_pb = multi_progress.add(ProgressBar::new(file_count as u64));
+            overall_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} files ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            overall_pb.set_message(format!("Extracting ZIP archive to {}", output_dir.display()));
+            
+            let file_pb = multi_progress.add(ProgressBar::new(100));
+            file_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("  {msg}\n  {spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            
+            (overall_pb, file_pb)
+        }
+    } else {
+        (ProgressBar::hidden(), ProgressBar::hidden())
+    };
+    
+    let mut extracted = 0;
+    let mut skipped = 0;
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+        
+        let outpath = match file.enclosed_name() {
+            Some(path) => output_dir.join(path),
+            None => continue,
+        };
+        
+        if file.is_dir() {
+            fs::create_dir_all(&outpath)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(p)
+                        .map_err(|e| format!("Failed to create directory: {}", e))?;
+                }
+            }
+            
+            if outpath.exists() {
+                if skip {
+                    skipped += 1;
+                    if show_progress {
+                        overall_pb.inc(1);
+                    }
+                    continue;
+                } else if !force {
+                    return Err(format!("File already exists: {}. Use -f/--force to overwrite.", outpath.display()));
+                }
+            }
+            
+            // Extract with progress tracking
+            if show_progress {
+                file_pb.set_length(file.size());
+                file_pb.set_position(0);
+                
+                let mut outfile = File::create(&outpath)
+                    .map_err(|e| format!("Failed to create file: {}", e))?;
+                
+                let mut buffer = vec![0u8; 131072]; // 128KB chunks
+                let mut total_written = 0u64;
+                
+                loop {
+                    let bytes_read = file.read(&mut buffer)
+                        .map_err(|e| format!("Failed to read from ZIP: {}", e))?;
+                    if bytes_read == 0 {
+                        break;
+                    }
+                    outfile.write_all(&buffer[..bytes_read])
+                        .map_err(|e| format!("Failed to write file: {}", e))?;
+                    total_written += bytes_read as u64;
+                    file_pb.set_position(total_written);
+                }
+                
+                overall_pb.inc(1);
+            } else {
+                let mut outfile = File::create(&outpath)
+                    .map_err(|e| format!("Failed to create file: {}", e))?;
+                
+                std::io::copy(&mut file, &mut outfile)
+                    .map_err(|e| format!("Failed to extract file: {}", e))?;
+            }
+            
+            extracted += 1;
+        }
+    }
+    
+    if show_progress {
+        overall_pb.finish_and_clear();
+        file_pb.finish_and_clear();
+    }
+    
+    if skipped > 0 {
+        println!("✓ Extracted {} file(s) to {} ({} skipped)", extracted, output_dir.display(), skipped);
+    } else {
+        println!("✓ Extracted {} file(s) to {}", extracted, output_dir.display());
+    }
+    Ok(output_dir.to_string_lossy().to_string())
+}
+
+fn extract_tar_with_multi(archive_path: &str, output_dir: &Path, force: bool, skip: bool, show_progress: bool, multi: Option<&MultiProgress>) -> Result<String, String> {
+    use tar::Archive;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::io::{Read, Write};
+    
+    let file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open TAR archive: {}", e))?;
+    
+    let mut archive = Archive::new(file);
+    
+    // Pre-check for existing files and count files
+    let mut conflicts = Vec::new();
+    let mut file_count = 0;
+    let entries: Vec<_> = archive.entries()
+        .map_err(|e| format!("Failed to read TAR archive entries: {}", e))?
+        .collect();
+    
+    for entry in &entries {
+        if let Ok(entry) = entry {
+            if entry.header().entry_type().is_file() {
+                file_count += 1;
+                if let Ok(path) = entry.path() {
+                    let outpath = output_dir.join(&path);
+                    if outpath.exists() {
+                        conflicts.push(outpath);
+                    }
+                }
+            }
+        }
+    }
+    
+    if !conflicts.is_empty() && !force && !skip {
+        return Err(format!(
+            "The following {} file(s) already exist:\\n  {}\\nUse -f/--force to overwrite or -s/--skip to skip existing files.",
+            conflicts.len(),
+            conflicts.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join("\\n  ")
+        ));
+    }
+    
+    // Setup progress bar - use provided MultiProgress if available
+    let file_pb = if show_progress {
+        if let Some(mp) = multi {
+            // Use provided MultiProgress - create per-file progress bar as child
+            let pb = mp.add(ProgressBar::new(0));
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("  {msg}\n  {spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            pb
+        } else {
+            // No MultiProgress provided - create standalone progress bar
+            let pb = ProgressBar::new(0);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            pb
+        }
+    } else {
+        ProgressBar::hidden()
+    };
+    
+    // Re-open archive for extraction
+    let file = File::open(archive_path)
+        .map_err(|e| format!("Failed to reopen TAR archive: {}", e))?;
+    
+    let mut archive = Archive::new(file);
+    
+    let mut extracted = 0;
+    let mut skipped = 0;
+    
+    for entry in archive.entries().map_err(|e| format!("Failed to read entries: {}", e))? {
+        let mut entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path().map_err(|e| format!("Failed to read entry path: {}", e))?.to_path_buf();
+        let outpath = output_dir.join(&path);
+        
+        if !entry.header().entry_type().is_file() {
+            // Create directories
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory: {}", e))?;
+            }
+            continue;
+        }
+        
+        if outpath.exists() {
+            if skip {
+                skipped += 1;
+                continue;
+            } else if !force {
+                return Err(format!("File already exists: {}", outpath.display()));
+            }
+        }
+        
+        if show_progress {
+            let size = entry.header().size().unwrap_or(0);
+            file_pb.set_length(size);
+            file_pb.set_position(0);
+            file_pb.set_message(format!("Extracting: {}", path.display()));
+        }
+        
+        // Create parent directories
+        if let Some(parent) = outpath.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        }
+        
+        // Extract file with progress tracking
+        let mut outfile = std::fs::File::create(&outpath)
+            .map_err(|e| format!("Failed to create file: {}", e))?;
+        
+        let mut buffer = vec![0u8; 131072]; // 128KB chunks
+        let mut total_written = 0u64;
+        
+        loop {
+            let bytes_read = entry.read(&mut buffer)
+                .map_err(|e| format!("Failed to read from archive: {}", e))?;
+            if bytes_read == 0 {
+                break;
+            }
+            outfile.write_all(&buffer[..bytes_read])
+                .map_err(|e| format!("Failed to write to file: {}", e))?;
+            total_written += bytes_read as u64;
+            if show_progress {
+                file_pb.set_position(total_written);
+            }
+        }
+        
+        extracted += 1;
+    }
+    
+    if show_progress {
+        file_pb.finish_and_clear();
+    } else {
+        println!("✓ Extracted {} file(s) to {}", extracted, output_dir.display());
+    }
+    
+    Ok(format!("Extracted {} files from TAR archive", extracted))
+}
+
+fn extract_tar(archive_path: &str, output_dir: &Path, force: bool, skip: bool, show_progress: bool) -> Result<String, String> {
+    use tar::Archive;
+    use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+    use std::io::{Read, Write};
+    
+    let file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open TAR archive: {}", e))?;
+    
+    let mut archive = Archive::new(file);
+    
+    // Pre-check for existing files and count files
+    let mut conflicts = Vec::new();
+    let mut file_count = 0;
+    let entries: Vec<_> = archive.entries()
+        .map_err(|e| format!("Failed to read TAR archive entries: {}", e))?
+        .collect();
+    
+    for entry in &entries {
+        if let Ok(entry) = entry {
+            if entry.header().entry_type().is_file() {
+                file_count += 1;
+                if let Ok(path) = entry.path() {
+                    let outpath = output_dir.join(&path);
+                    if outpath.exists() {
+                        conflicts.push(outpath);
+                    }
+                }
+            }
+        }
+    }
+    
+    if !conflicts.is_empty() && !force && !skip {
+        return Err(format!(
+            "The following {} file(s) already exist:\n  {}\nUse -f/--force to overwrite or -s/--skip to skip existing files.",
+            conflicts.len(),
+            conflicts.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join("\n  ")
+        ));
+    }
+    
+    // Setup dual progress bars (or single for one file)
+    let (overall_pb, file_pb) = if show_progress {
+        let multi = MultiProgress::new();
+        
+        if file_count == 1 {
+            // Single file: only per-file progress bar
+            let file_pb = multi.add(ProgressBar::new(0));
+            file_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            (ProgressBar::hidden(), file_pb)
+        } else {
+            // Multiple files: dual progress bars
+            let overall_pb = multi.add(ProgressBar::new(file_count as u64));
+            overall_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} files")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            overall_pb.set_message(format!("Extracting TAR archive to {}", output_dir.display()));
+            
+            let file_pb = multi.add(ProgressBar::new(0));
+            file_pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                    .unwrap()
+                    .progress_chars("#>-")
+            );
+            
+            (overall_pb, file_pb)
+        }
+    } else {
+        (ProgressBar::hidden(), ProgressBar::hidden())
+    };
+    
+    // Re-open archive for extraction
+    let file = File::open(archive_path)
+        .map_err(|e| format!("Failed to reopen TAR archive: {}", e))?;
+    
+    let mut archive = Archive::new(file);
+    
+    let mut extracted = 0;
+    let mut skipped = 0;
+    
+    for entry in archive.entries().map_err(|e| format!("Failed to read entries: {}", e))? {
+        let mut entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path().map_err(|e| format!("Failed to read entry path: {}", e))?.to_path_buf();
+        let outpath = output_dir.join(&path);
+        
+        if !entry.header().entry_type().is_file() {
+            // Create directories
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory: {}", e))?;
+            }
+            continue;
+        }
+        
+        if outpath.exists() {
+            if skip {
+                skipped += 1;
+                overall_pb.inc(1);
+                continue;
+            } else if !force {
+                return Err(format!("File already exists: {}. Use -f/--force to overwrite.", outpath.display()));
+            }
+        }
+        
+        // Create parent directories
+        if let Some(parent) = outpath.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        }
+        
+        if show_progress {
+            let file_size = entry.header().size()
+                .map_err(|e| format!("Failed to get file size: {}", e))?;
+            
+            file_pb.set_length(file_size);
+            
+            let mut outfile = File::create(&outpath)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            
+            let mut buffer = vec![0u8; 131072]; // 128KB chunks
+            let mut total_written = 0u64;
+            
+            loop {
+                let bytes_read = entry.read(&mut buffer)
+                    .map_err(|e| format!("Failed to read from TAR: {}", e))?;
+                if bytes_read == 0 {
+                    break;
+                }
+                outfile.write_all(&buffer[..bytes_read])
+                    .map_err(|e| format!("Failed to write file: {}", e))?;
+                total_written += bytes_read as u64;
+                file_pb.set_position(total_written);
+            }
+            
+            overall_pb.inc(1);
+        } else {
+            entry.unpack_in(output_dir)
+                .map_err(|e| format!("Failed to extract file: {}", e))?;
+        }
+        
+        extracted += 1;
+    }
+    
+    if show_progress {
+        overall_pb.finish_and_clear();
+        file_pb.finish_and_clear();
+        
+        if skipped > 0 {
+            println!("✓ Extracted {} file(s) to {} ({} skipped)", extracted, output_dir.display(), skipped);
+        } else {
+            println!("✓ Extracted {} file(s) to {}", extracted, output_dir.display());
+        }
+    }
+    Ok(output_dir.to_string_lossy().to_string())
+}
+
+// Archive creation functions
+
+fn create_archive(input_path: &str, output_path: Option<&str>, format: &str, force: bool, recursive: bool, show_progress: bool) -> Result<String, String> {
+    let path = Path::new(input_path);
+    
+    if !path.exists() {
+        return Err(format!("Path not found: {}", input_path));
+    }
+    
+    // Determine output path
+    let archive_path = if let Some(out) = output_path {
+        out.to_string()
+    } else {
+        // Generate default archive name based on input and format
+        let name = path.file_name()
+            .and_then(|n| n.to_str())
+            .ok_or("Invalid path name")?;
+        let parent = path.parent().unwrap_or(Path::new("."));
+        let extension = match format {
+            "zip" => "zip",
+            "7z" => "7z",
+            "tar" => "tar",
+            _ => return Err(format!("Unsupported archive format: {}", format)),
+        };
+        parent.join(format!("{}.{}", name, extension)).to_string_lossy().to_string()
+    };
+    
+    // Check if output already exists
+    if Path::new(&archive_path).exists() && !force {
+        return Err(format!("Output file already exists: {}. Use -f/--force to overwrite.", archive_path));
+    }
+    
+    // Check if path is directory and recursive is not set
+    if path.is_dir() && !recursive {
+        return Err("Path is a directory but -r/--recursive flag not provided".to_string());
+    }
+    
+    // Call appropriate archive creation function
+    match format {
+        "zip" => create_zip_archive(input_path, &archive_path, recursive, show_progress),
+        "tar" => create_tar_archive(input_path, &archive_path, recursive, show_progress),
+        "7z" => create_7z_archive(input_path, &archive_path, recursive, show_progress),
+        _ => Err(format!("Unsupported archive format: {}", format)),
+    }
+}
+
+fn create_zip_archive(input_path: &str, output_path: &str, recursive: bool, show_progress: bool) -> Result<String, String> {
+    use zip::write::{FileOptions, ZipWriter};
+    use zip::CompressionMethod;
+    use std::io::{Read, Write};
+    use walkdir::WalkDir;
+    use indicatif::{ProgressBar, ProgressStyle};
+    
+    let path = Path::new(input_path);
+    let file = File::create(output_path).map_err(|e| format!("Failed to create archive: {}", e))?;
+    let mut zip = ZipWriter::new(file);
+    
+    let options = FileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+    
+    let mut files_to_add = Vec::new();
+    
+    if path.is_file() {
+        files_to_add.push(path.to_path_buf());
+    } else if path.is_dir() {
+        let walker = if recursive {
+            WalkDir::new(path)
+        } else {
+            WalkDir::new(path).max_depth(1)
+        };
+        
+        for entry in walker.into_iter().filter_map(|e| e.ok()) {
+            if entry.file_type().is_file() {
+                files_to_add.push(entry.path().to_path_buf());
+            }
+        }
+    }
+    
+    let total_files = files_to_add.len() as u64;
+    let pb = if show_progress {
+        let bar = ProgressBar::new(total_files);
+        bar.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} files")
+                .unwrap()
+                .progress_chars("#>-")
+        );
+        bar.set_message("Creating ZIP archive");
+        bar
+    } else {
+        ProgressBar::hidden()
+    };
+    
+    for file_path in &files_to_add {
+        let name = if path.is_file() {
+            file_path.file_name().unwrap().to_string_lossy().to_string()
+        } else {
+            file_path.strip_prefix(path)
+                .unwrap_or(file_path)
+                .to_string_lossy()
+                .to_string()
+        };
+        
+        zip.start_file(name, options).map_err(|e| format!("Failed to add file to archive: {}", e))?;
+        
+        let mut f = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+        let mut buffer = Vec::new();
+        f.read_to_end(&mut buffer).map_err(|e| format!("Failed to read file: {}", e))?;
+        zip.write_all(&buffer).map_err(|e| format!("Failed to write to archive: {}", e))?;
+        
+        if show_progress {
+            pb.inc(1);
+        }
+    }
+    
+    zip.finish().map_err(|e| format!("Failed to finalize archive: {}", e))?;
+    
+    if show_progress {
+        pb.finish_and_clear();
+        println!("✓ Created ZIP archive: {} ({} files)", output_path, total_files);
+    }
+    
+    Ok(output_path.to_string())
+}
+
+fn create_tar_archive(input_path: &str, output_path: &str, recursive: bool, show_progress: bool) -> Result<String, String> {
+    use tar::Builder;
+    use walkdir::WalkDir;
+    use indicatif::{ProgressBar, ProgressStyle};
+    
+    let path = Path::new(input_path);
+    let file = File::create(output_path).map_err(|e| format!("Failed to create archive: {}", e))?;
+    let mut tar = Builder::new(file);
+    
+    let mut files_to_add = Vec::new();
+    
+    if path.is_file() {
+        files_to_add.push((path.to_path_buf(), path.file_name().unwrap().to_string_lossy().to_string()));
+    } else if path.is_dir() {
+        let walker = if recursive {
+            WalkDir::new(path)
+        } else {
+            WalkDir::new(path).max_depth(1)
+        };
+        
+        for entry in walker.into_iter().filter_map(|e| e.ok()) {
+            if entry.file_type().is_file() {
+                let archive_path = entry.path().strip_prefix(path)
+                    .unwrap_or(entry.path())
+                    .to_string_lossy()
+                    .to_string();
+                files_to_add.push((entry.path().to_path_buf(), archive_path));
+            }
+        }
+    }
+    
+    let total_files = files_to_add.len() as u64;
+    let pb = if show_progress {
+        let bar = ProgressBar::new(total_files);
+        bar.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} files")
+                .unwrap()
+                .progress_chars("#>-")
+        );
+        bar.set_message("Creating TAR archive");
+        bar
+    } else {
+        ProgressBar::hidden()
+    };
+    
+    for (file_path, archive_name) in &files_to_add {
+        tar.append_path_with_name(file_path, archive_name)
+            .map_err(|e| format!("Failed to add file to archive: {}", e))?;
+        
+        if show_progress {
+            pb.inc(1);
+        }
+    }
+    
+    tar.finish().map_err(|e| format!("Failed to finalize archive: {}", e))?;
+    
+    if show_progress {
+        pb.finish_and_clear();
+        println!("✓ Created TAR archive: {} ({} files)", output_path, total_files);
+    }
+    
+    Ok(output_path.to_string())
+}
+
+fn create_7z_archive(input_path: &str, output_path: &str, _recursive: bool, show_progress: bool) -> Result<String, String> {
+    use sevenz_rust::{SevenZWriter, SevenZArchiveEntry};
+    use indicatif::{ProgressBar, ProgressStyle};
+    
+    let path = Path::new(input_path);
+    
+    if !path.is_file() {
+        return Err("7z archive creation currently only supports single files. For directories, use --tar or --zip format.".to_string());
+    }
+    
+    let file_size = path.metadata()
+        .map_err(|e| format!("Failed to get file metadata: {}", e))?
+        .len();
+    let file_name = path.file_name()
+        .ok_or("Invalid file name")?
+        .to_str()
+        .ok_or("Non-UTF8 file name")?;
+    
+    // Create the 7z writer
+    let mut writer = SevenZWriter::create(output_path)
+        .map_err(|e| format!("Failed to create 7z archive: {}", e))?;
+    
+    // Create archive entry
+    let entry = SevenZArchiveEntry::from_path(path, file_name.to_string());
+    
+    if show_progress {
+        let pb = ProgressBar::new(file_size);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}) ({eta})")
+                .unwrap()
+                .progress_chars("#>-")
+        );
+        pb.set_message(format!("Creating 7z archive: {}", file_name));
+        
+        // Open file and wrap reader with progress tracking
+        let file = File::open(path)
+            .map_err(|e| format!("Failed to open input file: {}", e))?;
+        let reader = pb.wrap_read(file);
+        
+        // Add file to archive with progress-wrapped reader
+        writer.push_archive_entry(entry, Some(reader))
+            .map_err(|e| format!("Failed to add file to archive: {}", e))?;
+        
+        // Finalize archive
+        writer.finish()
+            .map_err(|e| format!("Failed to finalize archive: {}", e))?;
+        
+        pb.finish_and_clear();
+        println!("✓ Created 7z archive: {} (1 file)", output_path);
+    } else {
+        // Without progress, use simple file reading
+        let file = File::open(path)
+            .map_err(|e| format!("Failed to open input file: {}", e))?;
+        
+        writer.push_archive_entry(entry, Some(file))
+            .map_err(|e| format!("Failed to add file to archive: {}", e))?;
+        
+        writer.finish()
+            .map_err(|e| format!("Failed to finalize archive: {}", e))?;
+    }
+    
+    Ok(output_path.to_string())
 }
 
 fn get_compression_extension(source: &str, algorithm: &str) -> Result<(&'static str, String), String> {
