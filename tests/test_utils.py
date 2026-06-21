@@ -204,3 +204,22 @@ def test_dict_to_rec():
     assert rec.get_value('SITE_GRP') == site_grp
     assert rec.get_value('START_T') == start_t
     assert rec.get_value('WAFER_ID') == waf_id
+
+def test_records_from_file_handles_unrecognised_magic_number():
+    """Regression for #75: a bare-binary STDF file whose magic number does
+    not match any recognised signature must not crash records_from_file
+    with IndexError. The previous code did ``compression[0]`` without
+    checking that the list was non-empty."""
+    from unittest.mock import patch
+
+    far_bytes = STDF.FAR().__repr__()
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".stdf", delete=False) as f:
+        f.write(far_bytes)
+        file_path = f.name
+
+    with patch("Semi_ATE.STDF.utils.extension_from_magic_number_in_file",
+               return_value=[]):
+        records = list(STDF.records_from_file(file_path))
+
+    assert len(records) >= 1
+    assert records[0].id == "FAR"

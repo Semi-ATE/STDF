@@ -721,26 +721,34 @@ class records_from_file(object):
                 raise STDFError("'%s' does not exist" %(FileName))
 #           seimit : adding support for compressed files
             compression = extension_from_magic_number_in_file(FileName)
-            if compression[0] == '.xz':
+            # `extension_from_magic_number_in_file` returns an empty list
+            # when no magic signature is recognised (e.g. some bare-binary
+            # STDF files produced by older ATE tooling). Indexing
+            # `compression[0]` unconditionally raises IndexError in that
+            # case and prevents the file from ever being opened — see #75.
+            compression_ext = compression[0] if compression else None
+            if compression_ext == '.xz':
                 import lzma
                 self.fd = lzma.open(FileName, 'rb')
                 self.parse_FAR()
-            elif compression[0] == '.bz2':
+            elif compression_ext == '.bz2':
                 import bz2
                 self.fd = bz2.open(FileName, 'rb')
                 self.parse_FAR()
-            elif compression[0] == '.gz':
+            elif compression_ext == '.gz':
                 import gzip
                 self.fd = gzip.open(FileName, 'rb')
                 self.parse_FAR()
-            elif compression[0] == '.zip':
+            elif compression_ext == '.zip':
                 import zipfile
                 zfile = zipfile.ZipFile(FileName, 'r')
                 for name in zfile.namelist():
                     self.fd = zfile.open(name)
                     self.parse_FAR()
             else:
-                # Assume standard binary stdf file
+                # Assume standard binary stdf file (no recognised
+                # compression magic, or magic that does not match any
+                # supported compression scheme).
                 self.endian = get_STDF_setup_from_file(FileName)[0]
                 self.version = 'V%s' % struct.unpack(
                     'B', get_bytes_from_file(FileName, 5, 1))
