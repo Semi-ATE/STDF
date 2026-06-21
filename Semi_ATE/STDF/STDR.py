@@ -40,6 +40,30 @@ __author__ = '$Author: tho $'
 
 __latest_STDF_version__ = 'V4'
 
+
+def _safe_decode(buf, encoding='utf-8'):
+    '''
+    Decode `buf` using `encoding`, falling back to latin-1 if the bytes are
+    not valid in the primary encoding.
+
+    Real-world STDF files emitted by legacy ATE platforms (notably Teradyne
+    Ultraflex) frequently contain CP-1252/ANSI bytes in C*n string fields
+    such as test descriptions and lot identifiers. A strict utf-8 decode
+    raises `UnicodeDecodeError` and aborts parsing of the entire file
+    (issue #77).
+
+    latin-1 is a byte-preserving fallback: every byte (0x00..0xFF) maps to
+    a defined code point, so this function never raises. Characters such
+    as the en-dash 0x96 are then surfaced as their CP-1252 glyph rather
+    than being replaced with U+FFFD, which keeps downstream lot-id and
+    test-name text legible.
+    '''
+    try:
+        return buf.decode(encoding)
+    except UnicodeDecodeError:
+        return buf.decode('latin-1')
+
+
 FileNameDefinitions = {
     'V4' : r'[a-zA-Z][a-zA-Z0-9_]{0,38}\.[sS][tT][dD][a-zA-Z0-9_\.]{0,36}'
 }
@@ -1432,7 +1456,7 @@ class STDR(ABC):
                                 raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, n_bytes, len(self.buffer)))
                             working_buffer = self.buffer[0:n_bytes]
                             self.buffer = self.buffer[n_bytes:]
-                            s = working_buffer.decode('utf-8')
+                            s = _safe_decode(working_buffer)
                             result.append(s)
                         self.set_value(FieldKey, result)
                         return
@@ -1536,7 +1560,7 @@ class STDR(ABC):
                                 working_buffer = self.buffer[0:bytes_to_read]
                                 self.buffer = self.buffer[bytes_to_read:]
                                 if code == 10 or code == 11:
-                                    v = working_buffer.decode('ASCII')
+                                    v = _safe_decode(working_buffer, 'ASCII')
                                     cv = [ (code, v) ]
                                     self.set_value(FieldKey, cv)
                             elif code == 12:
@@ -1641,7 +1665,7 @@ class STDR(ABC):
                             raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, method_name,FieldKey, Bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:int(Bytes)]
                         self.buffer = self.buffer[int(Bytes):]
-                        result = working_buffer.decode()
+                        result = _safe_decode(working_buffer)
                     elif Bytes == 'n': # C*n
                         working_buffer = self.buffer[0:1]
                         self.buffer = self.buffer[1:]
@@ -1650,14 +1674,14 @@ class STDR(ABC):
                             raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
-                        result = working_buffer.decode('utf-8')
+                        result = _safe_decode(working_buffer)
                     elif Bytes == 'f': # C*f
                         n_bytes = self.get_fields(Ref)[3]
                         if len(self.buffer) < n_bytes:
                             raise STDFError("%s.%s(%s) : Not enough bytes in buffer (need %s while %s available)." % (self.id,method_name, FieldKey, n_bytes, len(self.buffer)))
                         working_buffer = self.buffer[0:n_bytes]
                         self.buffer = self.buffer[n_bytes:]
-                        result = working_buffer.decode()
+                        result = _safe_decode(working_buffer)
                     else:
                         raise STDFError("%s.%(%s) : Unsupported type '%s'." % (self.id, method_name,FieldKey, '*'.join((Type, Bytes))))
                     if self.local_debug: print("%s.%s(%s)\n   '%s' [%s] -> %s" % (self.id,method_name, FieldKey, self.hexify(pkg), '*'.join((Type, Bytes)), result))
