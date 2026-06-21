@@ -441,19 +441,20 @@ def HEAD_NUM_and_SITE_NUM_from_record(record):
 def TEST_NUM_from_record(record, endian):
     '''
     given a PTR, MPR or FTR record, extract the test Number.
-    Note: TEST_NUM is for these records always located on offset 4..7
+    Note: TEST_NUM is a U*4 (unsigned 4-byte) field located at offset 4..7
+          (inclusive), so the slice is record[4:8].
 
                 REC_TYP   REC_SUB   TEST_NUM (V4)
-           PTR      15       10       4:7
-           MPR      15       15       4:7
-           FTR      15       20       4:7
+           PTR      15       10       4:8
+           MPR      15       15       4:8
+           FTR      15       20       4:8
 
           Also note that endian is important here!
     '''
     REC_TYP, REC_SUB = TS_from_record(record)
     TEST_NUM = -1
     if REC_TYP == 15 and REC_SUB in [10, 15, 20]:
-        TEST_NUM = struct.unpack("%sI" % endian, record[4:7])
+        TEST_NUM = int(struct.unpack("%sI" % endian, record[4:8])[0])
     return TEST_NUM
 
 compression_extensions = ['.gz', '.7z', '.zip', '.xz', '.bz2']
