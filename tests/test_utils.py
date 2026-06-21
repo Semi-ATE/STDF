@@ -6,13 +6,18 @@ Created on Sat Apr 24 15:38:51 2021
 @author: seimit
 """
 import os
+import struct
 import tempfile
 import gzip
 import bz2
 import lzma
 import zipfile
 import time
+
+import pytest
+
 from Semi_ATE import STDF
+from Semi_ATE.STDF.utils import TEST_NUM_from_record
 
 def test_records_from_file():
     
@@ -204,3 +209,38 @@ def test_dict_to_rec():
     assert rec.get_value('SITE_GRP') == site_grp
     assert rec.get_value('START_T') == start_t
     assert rec.get_value('WAFER_ID') == waf_id
+
+def _make_ptr_header(endian: str, test_num: int) -> bytes:
+    """Build the first 8 bytes of a PTR record: REC_LEN, REC_TYP=15, REC_SUB=10, TEST_NUM."""
+    return struct.pack(f"{endian}HBBI", 4, 15, 10, test_num)
+
+
+@pytest.mark.parametrize("endian", ["<", ">"])
+def test_TEST_NUM_from_record_roundtrip(endian):
+    """A PTR with TEST_NUM > 2**24 round-trips correctly when all 4 bytes are read.
+
+    Regression test for #76: previously the slice was record[4:7] (3 bytes),
+    which would raise struct.error and made the function unusable for any
+    PTR/MPR/FTR record. The fix is record[4:8] (4 bytes, matching U*4).
+    """
+    expected = 0x12345678  # > 2**24, exposes any MSB-byte truncation
+    record = _make_ptr_header(endian, expected)
+    assert TEST_NUM_from_record(record, endian) == expected
+
+
+def test_TEST_NUM_from_record_returns_int_for_non_test_record():
+    """Non-PTR/MPR/FTR records get a sentinel int (-1), not a tuple — the
+    returned value must always be int for downstream comparisons to work."""
+    # FAR record: REC_TYP=0, REC_SUB=10
+    record = struct.pack("<HBBBB", 2, 0, 10, 2, 4)
+    result = TEST_NUM_from_record(record, "<")
+    assert result == -1
+    assert isinstance(result, int)
+
+
+@pytest.mark.parametrize("rec_sub", [10, 15, 20])
+def test_TEST_NUM_from_record_handles_all_test_subtypes(rec_sub):
+    """PTR (15,10), MPR (15,15), and FTR (15,20) all carry TEST_NUM at offset 4..7."""
+    expected = 42
+    record = struct.pack("<HBBI", 4, 15, rec_sub, expected)
+    assert TEST_NUM_from_record(record, "<") == expected
